@@ -30,8 +30,8 @@ def get_rzp():
         return _rzp_client
     if RZP_KEY_ID and RZP_KEY_SECRET:
         try:
-            # razorpay imported lazily inside get_rzp()
-            _rzp_client = razorpay.Client(auth=(RZP_KEY_ID, RZP_KEY_SECRET))
+            import razorpay as rzp_module
+            _rzp_client = rzp_module.Client(auth=(RZP_KEY_ID, RZP_KEY_SECRET))
             print(f"Razorpay ready: {RZP_KEY_ID[:15]}...")
         except Exception as e:
             print(f"Razorpay init error: {e}")
