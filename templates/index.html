@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <style>
 :root{
   --bg:#f5f4f0;--bg2:#eeece7;--surface:#fff;--surface2:#faf9f6;
@@ -30,7 +31,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 @keyframes popRed{0%{transform:scale(0.7) translateY(10px);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1) translateY(0);opacity:1}}
 @keyframes countdown{from{width:100%}to{width:0%}}
 @keyframes bounce{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
-@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
 
 /* STARTUP */
 #startup{flex-direction:column;align-items:center;justify-content:center;background:var(--surface);position:relative;overflow:hidden;}
@@ -53,11 +54,8 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .lh{text-align:center;animation:riseIn 0.5s ease forwards;}
 .lh h2{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;margin-bottom:6px;}
 .lh p{color:var(--t2);font-size:14px;}
-.lcard{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:32px;width:100%;max-width:420px;box-shadow:var(--shl);animation:riseIn 0.5s ease 0.1s both;display:flex;flex-direction:column;align-items:center;gap:18px;}
+.lcard{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:32px;width:100%;max-width:400px;box-shadow:var(--shl);animation:riseIn 0.5s ease 0.1s both;display:flex;flex-direction:column;align-items:center;gap:18px;}
 .tidbadge{background:var(--gl);border:1px solid rgba(26,107,74,0.2);border-radius:12px;padding:8px 16px;font-size:13px;font-weight:600;color:var(--green);}
-.qr-methods{display:flex;gap:8px;width:100%;}
-.qr-method-btn{flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg2);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;color:var(--t2);cursor:pointer;transition:all 0.2s;}
-.qr-method-btn.active{border-color:var(--green);background:var(--gl);color:var(--green);}
 .qrf{position:relative;width:200px;height:200px;border-radius:16px;overflow:hidden;background:#fff;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;}
 .qrc{position:absolute;width:17px;height:17px;border-color:var(--green);border-style:solid;z-index:3;}
 .qrc.tl{top:6px;left:6px;border-width:3px 0 0 3px;border-radius:3px 0 0 0;}
@@ -67,7 +65,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .qrbeam{position:absolute;width:88%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);animation:beam 2s ease-in-out infinite;z-index:2;}
 #loginQRBox{width:160px;height:160px;display:flex;align-items:center;justify-content:center;}
 #loginQRBox canvas,#loginQRBox img{width:160px!important;height:160px!important;}
-.qhint{font-size:12px;color:var(--t3);text-align:center;line-height:1.6;background:var(--bl);padding:8px 12px;border-radius:8px;width:100%;}
+.qhint{font-size:12px;color:var(--t3);text-align:center;line-height:1.6;}
 .div{width:100%;display:flex;align-items:center;gap:10px;color:var(--t3);font-size:12px;}
 .div::before,.div::after{content:'';flex:1;height:1px;background:var(--border);}
 .prow{display:flex;gap:8px;width:100%;}
@@ -75,9 +73,9 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .inp{flex:1;background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--rs);padding:12px 15px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--t);outline:none;transition:all 0.2s;}
 .inp:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(26,107,74,0.1);background:#fff;}
 .inp::placeholder{color:var(--t3);}
-.lbtn{width:100%;background:var(--green);color:#fff;border:none;padding:15px;border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;}
-.lbtn:disabled{opacity:0.4;cursor:not-allowed;}
-.lbtn:not(:disabled):hover{background:var(--gd);}
+.lbtn{width:100%;background:var(--green);color:#fff;border:none;padding:15px;border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;opacity:0.4;}
+.lbtn:not(:disabled){opacity:1;}
+.lbtn:hover:not(:disabled){background:var(--gd);}
 
 /* DASHBOARD */
 #dashboard{flex-direction:column;background:var(--bg);}
@@ -101,8 +99,8 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .camp span:first-child{font-size:36px;opacity:0.3;}
 .camp span:last-child{font-size:11px;font-family:monospace;background:rgba(255,255,255,0.07);padding:5px 10px;border-radius:6px;color:#888;}
 .det-popup{position:absolute;top:12px;right:12px;max-width:190px;border-radius:12px;padding:10px 14px;display:none;z-index:20;flex-direction:column;gap:2px;}
-.det-popup.add{background:rgba(26,107,74,0.93);color:#fff;border:2px solid #2dcc7a;box-shadow:0 4px 20px rgba(26,107,74,0.4);}
-.det-popup.remove{background:rgba(192,57,43,0.93);color:#fff;border:2px solid #e74c3c;box-shadow:0 4px 20px rgba(192,57,43,0.4);top:auto;bottom:12px;}
+.det-popup.add{background:rgba(26,107,74,0.93);color:#fff;border:2px solid #2dcc7a;box-shadow:0 4px 20px rgba(26,107,74,0.4);animation:popGreen 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;}
+.det-popup.remove{background:rgba(192,57,43,0.93);color:#fff;border:2px solid #e74c3c;box-shadow:0 4px 20px rgba(192,57,43,0.4);top:auto;bottom:12px;animation:popRed 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;}
 .dp-icon{font-size:20px;margin-bottom:2px;}
 .dp-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:0.8;}
 .dp-name{font-size:13px;font-weight:600;}
@@ -136,15 +134,14 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .ntag{padding:3px 10px;border-radius:50px;font-size:11px;font-weight:500;background:var(--bl);color:var(--blue);}
 .ntag.warn{background:var(--al);color:var(--amber);}.ntag.ok{background:var(--gl);color:var(--green);}
 
-/* CART PANEL */
+/* CART */
 .right{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
 .ctop{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .chead{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;}
 .cbadge{background:var(--green);color:#fff;font-size:11px;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
 .fraud-top{display:none;margin:8px;background:var(--rl);border:1.5px solid var(--red);border-radius:12px;padding:12px 16px;align-items:center;gap:10px;}
-.fraud-top.active{display:flex;animation:riseIn 0.3s ease;}
-.ft-icon{font-size:20px;flex-shrink:0;}
-.ft-text{flex:1;font-size:13px;font-weight:600;color:var(--red);line-height:1.4;}
+.fraud-top.active{display:flex;}
+.ft-icon{font-size:20px;}.ft-text{flex:1;font-size:13px;font-weight:600;color:var(--red);line-height:1.4;}
 .clist{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:5px;}
 .clist::-webkit-scrollbar{width:3px;}
 .clist::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
@@ -164,51 +161,23 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .pbtn:hover{background:var(--gd);transform:translateY(-1px);}
 .pbtn:disabled{background:var(--border);color:var(--t3);box-shadow:none;transform:none;cursor:not-allowed;}
 
-/* PAYMENT */
-#payment{flex-direction:column;align-items:center;justify-content:flex-start;background:var(--bg);padding:24px;overflow-y:auto;}
-.pw{width:100%;max-width:480px;display:flex;flex-direction:column;gap:14px;animation:riseIn 0.4s ease forwards;padding:12px 0;}
-.pcard{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:28px;box-shadow:var(--shl);}
-.pct{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:4px;}
-.pcs{font-size:13px;color:var(--t2);margin-bottom:20px;}
-.pamt{font-family:'Playfair Display',serif;font-size:56px;font-weight:900;color:var(--green);line-height:1;margin-bottom:20px;}
-.pamt sup{font-size:26px;vertical-align:super;}
-.upi-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:18px;}
-#upiQRBox{width:200px;height:200px;background:#fff;border:2px solid var(--border);border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;}
-#upiQRBox canvas,#upiQRBox img{width:184px!important;height:184px!important;}
-.upi-id{background:var(--gl);border:1px solid rgba(26,107,74,0.2);border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;color:var(--green);}
-.upi-hint{font-size:12px;color:var(--t3);text-align:center;}
-.pay-bill-summary{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:12px;margin-bottom:16px;}
-.brow{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px dashed var(--border);}
-.brow:last-child{border:none;font-weight:700;font-size:14px;color:var(--green);margin-top:4px;padding-top:8px;}
-
-/* UTR verification */
-.utr-section{background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
-.utr-label{font-size:13px;font-weight:600;color:var(--t2);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
-.utr-sublabel{font-size:11px;color:var(--t3);margin-bottom:10px;}
-.utr-input{width:100%;background:#fff;border:1.5px solid var(--border);border-radius:9px;padding:12px 15px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--t);outline:none;transition:all 0.2s;letter-spacing:1px;}
-.utr-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(26,107,74,0.1);}
-.utr-input.valid{border-color:var(--green);background:var(--gl);}
-.utr-input.invalid{border-color:var(--red);animation:shake 0.3s ease;}
-.utr-hint{font-size:11px;margin-top:6px;color:var(--t3);}
-.utr-hint.ok{color:var(--green);}
-.confirm-btn{width:100%;background:var(--green);color:#fff;border:none;padding:16px;border-radius:11px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.25s;box-shadow:0 4px 18px rgba(26,107,74,0.2);}
-.confirm-btn:hover:not(:disabled){background:var(--gd);}
-.confirm-btn:disabled{background:var(--border);color:var(--t3);box-shadow:none;cursor:not-allowed;}
+/* PROCESSING OVERLAY */
+#processingOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;}
+#processingOverlay.active{display:flex;}
+.proc-card{background:#fff;border-radius:20px;padding:36px 48px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.proc-spinner{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite;}
+.proc-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;}
+.proc-sub{font-size:13px;color:var(--t2);}
 
 /* BILL PAGE */
 #billpage{flex-direction:column;align-items:center;justify-content:flex-start;background:var(--bg);padding:24px;overflow-y:auto;}
 .bp-wrap{width:100%;max-width:480px;animation:riseIn 0.4s ease forwards;padding:12px 0;}
-.bp-fraud{display:none;background:var(--rl);border:1.5px solid var(--red);border-radius:12px;padding:14px 16px;margin-bottom:14px;align-items:center;gap:10px;}
-.bp-fraud.active{display:flex;animation:riseIn 0.3s ease;}
-.bp-fraud-icon{font-size:22px;}
-.bp-fraud-text{flex:1;font-size:13px;font-weight:600;color:var(--red);line-height:1.5;}
-.bp-fraud-btn{background:var(--red);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;flex-shrink:0;}
 .bp-card{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:28px;box-shadow:var(--shl);margin-bottom:14px;}
 .bp-header{text-align:center;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:16px;}
 .bp-logo{font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:var(--green);margin-bottom:4px;}
 .bp-date{font-size:12px;color:var(--t3);}
 .bp-trolley{font-size:12px;color:var(--t2);margin-top:4px;font-weight:500;}
-.bp-utr{font-size:11px;color:var(--t3);margin-top:2px;font-family:monospace;}
+.bp-paid-badge{display:inline-flex;align-items:center;gap:6px;background:var(--gl);border:1px solid rgba(26,107,74,0.3);border-radius:50px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--green);margin-top:8px;}
 .bp-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
 .bp-item:last-child{border:none;}
 .bp-il{display:flex;align-items:center;gap:10px;}
@@ -218,28 +187,27 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .bp-total-row{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0 0;border-top:2px solid var(--border);}
 .bp-tl{font-size:14px;color:var(--t2);}
 .bp-tn{font-family:'Playfair Display',serif;font-size:32px;font-weight:900;color:var(--green);}
-.bp-paid-badge{display:inline-flex;align-items:center;gap:6px;background:var(--gl);border:1px solid rgba(26,107,74,0.3);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--green);margin-top:10px;}
-.wa-status{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:var(--sh);margin-bottom:12px;display:flex;align-items:center;gap:12px;}
-.wa-status-icon{font-size:28px;}
-.wa-status-text{flex:1;}
-.wa-status-title{font-size:14px;font-weight:600;margin-bottom:2px;}
-.wa-status-sub{font-size:12px;color:var(--t3);}
-.wa-status-badge{font-size:12px;font-weight:600;padding:4px 12px;border-radius:50px;}
-.wa-status-badge.sending{background:var(--al);color:var(--amber);}
-.wa-status-badge.sent{background:var(--gl);color:var(--green);}
-.wa-status-badge.failed{background:var(--rl);color:var(--red);}
+.bp-txn{font-size:11px;color:var(--t3);margin-top:4px;font-family:monospace;}
+.wa-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--sh);margin-bottom:12px;}
+.wa-title{font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px;}
+.wa-row{display:flex;gap:8px;}
+.wai{flex:1;background:var(--bg2);border:1.5px solid var(--border);border-radius:9px;padding:12px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--t);outline:none;transition:all 0.2s;}
+.wai:focus{border-color:#25D366;background:#fff;}
+.wab{background:#25D366;color:#fff;border:none;padding:12px 16px;border-radius:9px;cursor:pointer;display:flex;align-items:center;transition:all 0.2s;flex-shrink:0;}
+.wab:hover{background:#1da851;}
+.sent-badge{display:none;margin-top:10px;background:var(--gl);border:1px solid rgba(26,107,74,0.3);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--green);font-weight:500;align-items:center;gap:6px;}
+.sent-badge.show{display:flex;}
 .done-btn{width:100%;background:var(--green);color:#fff;border:none;padding:16px;border-radius:11px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.25s;box-shadow:0 4px 18px rgba(26,107,74,0.2);}
-.done-btn:hover:not(:disabled){background:var(--gd);}
-.done-btn:disabled{background:var(--border);color:var(--t3);box-shadow:none;cursor:not-allowed;}
+.done-btn:hover{background:var(--gd);}
 
 /* THANK YOU */
 #thankyou{flex-direction:column;align-items:center;justify-content:center;background:var(--surface);text-align:center;gap:16px;}
-.ty-circle{width:100px;height:100px;border-radius:50%;border:3px solid var(--green);background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:48px;animation:bounce 0.7s cubic-bezier(0.175,0.885,0.32,1.275) forwards;box-shadow:0 0 36px rgba(26,107,74,0.15);}
+.ty-circle{width:100px;height:100px;border-radius:50%;border:3px solid var(--green);background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:48px;animation:bounce 0.7s cubic-bezier(0.175,0.885,0.32,1.275) forwards;}
 .ty-h{font-family:'Playfair Display',serif;font-size:36px;font-weight:900;animation:riseIn 0.5s ease 0.3s both;}
 .ty-p{color:var(--t2);font-size:15px;animation:riseIn 0.5s ease 0.4s both;}
 .ty-total{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green);animation:riseIn 0.5s ease 0.5s both;}
 .ty-bar-wrap{width:200px;height:4px;background:var(--border);border-radius:4px;overflow:hidden;animation:riseIn 0.5s ease 0.6s both;}
-.ty-bar{height:100%;background:var(--green);border-radius:4px;}
+.ty-bar{height:100%;background:var(--green);border-radius:4px;animation:countdown 5s linear forwards;}
 .ty-note{font-size:12px;color:var(--t3);animation:riseIn 0.5s ease 0.7s both;}
 
 /* TOAST */
@@ -267,36 +235,21 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 
 <!-- LOGIN -->
 <div id="login" class="screen">
-  <div class="lh"><h2>Link Your Trolley</h2><p>Scan QR with phone or enter your WhatsApp number</p></div>
+  <div class="lh"><h2>Link Your Trolley</h2><p>Enter your WhatsApp number to start</p></div>
   <div class="lcard">
     <div class="tidbadge">🛒 Trolley #<span id="trolleyId">T-0000</span></div>
-
-    <!-- Method toggle -->
-    <div class="qr-methods">
-      <button class="qr-method-btn active" id="btnQR" onclick="switchMethod('qr')">📱 Scan QR</button>
-      <button class="qr-method-btn" id="btnManual" onclick="switchMethod('manual')">⌨️ Enter Number</button>
+    <div class="qrf">
+      <div class="qrc tl"></div><div class="qrc tr"></div>
+      <div class="qrc bl"></div><div class="qrc br"></div>
+      <div class="qrbeam"></div>
+      <div id="loginQRBox"></div>
     </div>
-
-    <!-- QR METHOD -->
-    <div id="qrSection">
-      <div class="qrf">
-        <div class="qrc tl"></div><div class="qrc tr"></div>
-        <div class="qrc bl"></div><div class="qrc br"></div>
-        <div class="qrbeam"></div>
-        <div id="loginQRBox"></div>
-      </div>
-      <div class="qhint">📱 Scan with phone camera → opens site on phone → enter your number there to link trolley</div>
+    <p class="qhint">📱 Scan QR to open on phone — or enter number below</p>
+    <div class="div">enter your WhatsApp number</div>
+    <div class="prow">
+      <div class="ppre">🇮🇳 +91</div>
+      <input class="inp" id="loginPhone" type="tel" placeholder="10-digit WhatsApp number" maxlength="10" oninput="onPhoneInput(this.value)">
     </div>
-
-    <!-- MANUAL METHOD -->
-    <div id="manualSection" style="display:none;width:100%;display:flex;flex-direction:column;gap:12px;">
-      <div class="div">your WhatsApp number</div>
-      <div class="prow">
-        <div class="ppre">🇮🇳 +91</div>
-        <input class="inp" id="loginPhone" type="tel" placeholder="10-digit number" maxlength="10" oninput="onPhoneInput(this.value)">
-      </div>
-    </div>
-
     <button class="lbtn" id="loginBtn" onclick="doLogin()" disabled>Start Shopping →</button>
   </div>
 </div>
@@ -357,83 +310,58 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
       <div class="ctop"><span class="chead">Cart</span><span class="cbadge" id="cartBadge">0</span></div>
       <div class="fraud-top" id="fraudBanner">
         <span class="ft-icon">🚨</span>
-        <span class="ft-text" id="fraudText">Cart changed during payment! Total recalculated.</span>
+        <span class="ft-text" id="fraudText">Cart changed! Total recalculated. Please pay again.</span>
       </div>
       <div class="clist" id="cartList">
         <div class="empty"><span class="ei">🛒</span><span>Cart is empty</span><span style="font-size:12px">Point camera at products</span></div>
       </div>
       <div class="cbot">
         <div class="tline"><span class="tlab">Total</span><span class="tnum" id="totalNum">₹0</span></div>
-        <button class="pbtn" id="payBtn" onclick="goToPayment()" disabled>Proceed to Pay →</button>
+        <button class="pbtn" id="payBtn" onclick="startPayment()" disabled>Pay with Razorpay →</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- PAYMENT PAGE -->
-<div id="payment" class="screen">
-  <div class="pw">
-    <div class="pcard">
-      <div class="pct">Scan &amp; Pay</div>
-      <div class="pcs">Open GPay / PhonePe / any UPI app and scan</div>
-      <div class="pamt"><sup>₹</sup><span id="payAmt">0</span></div>
-      <div class="upi-wrap">
-        <div id="upiQRBox"></div>
-        <div class="upi-id">📲 sherinsajan784-2@oksbi</div>
-        <div class="upi-hint">GPay · PhonePe · Paytm · BHIM · Any UPI</div>
-      </div>
-      <div class="pay-bill-summary" id="payBillBox"></div>
-
-      <!-- UTR Verification — must enter to unlock button -->
-      <div class="utr-section">
-        <div class="utr-label">🔐 Enter UPI Transaction ID (UTR)</div>
-        <div class="utr-sublabel">Find this in your UPI app after successful payment</div>
-        <input class="utr-input" id="utrInput" type="text" placeholder="e.g. 123456789012" maxlength="22" oninput="onUTRInput(this.value)">
-        <div class="utr-hint" id="utrHint">Enter 12-digit UTR number from your payment app</div>
-      </div>
-
-      <button class="confirm-btn" id="confirmBtn" onclick="confirmPayment()" disabled>✅ &nbsp; Confirmed — View Receipt</button>
-    </div>
+<!-- PROCESSING OVERLAY -->
+<div id="processingOverlay">
+  <div class="proc-card">
+    <div class="proc-spinner"></div>
+    <div class="proc-title" id="procTitle">Processing Payment</div>
+    <div class="proc-sub" id="procSub">Please wait...</div>
   </div>
 </div>
 
-<!-- BILL RECEIPT PAGE -->
+<!-- BILL PAGE -->
 <div id="billpage" class="screen">
   <div class="bp-wrap">
-
-    <!-- Fraud warning on bill page -->
-    <div class="bp-fraud" id="bpFraud">
-      <span class="bp-fraud-icon">🚨</span>
-      <div class="bp-fraud-text" id="bpFraudText">Item added after payment! Remove it to continue.</div>
-      <button class="bp-fraud-btn" onclick="goBackToCart('Fraud detected on bill page')">Go to Cart</button>
-    </div>
-
     <div class="bp-card">
       <div class="bp-header">
         <div class="bp-logo">🛒 SmartTrolley</div>
         <div class="bp-date" id="bpDate">—</div>
-        <div class="bp-trolley" id="bpTrolleyInfo">—</div>
-        <div class="bp-utr" id="bpUTR">UTR: —</div>
+        <div class="bp-trolley" id="bpTrolleyInfo">Trolley — Customer</div>
+        <div class="bp-paid-badge">✅ Payment Verified</div>
       </div>
       <div id="bpItems"></div>
       <div class="bp-total-row">
-        <span class="bp-tl">Amount Paid</span>
+        <div>
+          <div class="bp-tl">Amount Paid</div>
+          <div class="bp-txn" id="bpTxnId">—</div>
+        </div>
         <span class="bp-tn" id="bpTotal">₹0</span>
       </div>
-      <div><span class="bp-paid-badge">✅ Payment Verified · UTR Confirmed</span></div>
     </div>
-
-    <!-- WhatsApp auto-send status -->
-    <div class="wa-status">
-      <span class="wa-status-icon">📱</span>
-      <div class="wa-status-text">
-        <div class="wa-status-title">WhatsApp Bill + PDF Receipt</div>
-        <div class="wa-status-sub" id="waStatusSub">Sending to +91 <span id="waStatusPhone">—</span>...</div>
+    <div class="wa-card">
+      <div class="wa-title">📤 Send receipt to WhatsApp</div>
+      <div class="wa-row">
+        <input class="wai" id="waPhone" type="tel" placeholder="WhatsApp number">
+        <button class="wab" onclick="sendBill()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </button>
       </div>
-      <span class="wa-status-badge sending" id="waStatusBadge">Sending...</span>
+      <div class="sent-badge" id="sentBadge">✅ Bill + PDF receipt sent to WhatsApp!</div>
     </div>
-
-    <button class="done-btn" id="doneBtn" onclick="doneBill()">✓ &nbsp; Done — Verified Receipt</button>
+    <button class="done-btn" onclick="doneBill()">✓ &nbsp; Done — Verified Receipt</button>
   </div>
 </div>
 
@@ -453,14 +381,14 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 // ════════════════════════════════
 // CONFIG
 // ════════════════════════════════
-const RENDER_URL = "https://smart-trolley-owlx.onrender.com";
-const UPI_ID     = "sherinsajan784-2@oksbi";
-const UPI_NAME   = "SmartTrolley";
+const RENDER_URL    = "https://smart-trolley-owlx.onrender.com";
+const RZP_KEY_ID    = "rzp_live_SULbMnyyuHNunP";
+const UPI_ID        = "sherinsajan784-2@oksbi";
 
 // ════════════════════════════════
 // STATE
 // ════════════════════════════════
-let cart            = [];
+let cart = [];
 let totalDetected   = 0;
 let currentPhone    = "";
 let trolleyNum      = "";
@@ -471,15 +399,15 @@ let lastWeight      = 0;
 let piConnected     = false;
 let demoIdx         = 0;
 let lastServerCount = 0;
-let currentPage     = 'startup'; // tracks current page
+let onPaymentPage   = false;
 let paidTotal       = 0;
-let confirmedUTR    = "";
+let paymentId       = "";
+let orderId         = "";
 let addPopTimer     = null;
 let removePopTimer  = null;
-let bpFraudItem     = null; // item added fraudulently on bill page
 
 // ════════════════════════════════
-// PRODUCT DATA
+// DATA
 // ════════════════════════════════
 const DEMO = [
   {name:"Sprite 400ml",price:30},{name:"Maggi 140g",price:25},
@@ -512,11 +440,20 @@ const EM = {
 function goTo(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  currentPage = id;
+}
+
+function showProcessing(title, sub) {
+  document.getElementById('procTitle').textContent = title;
+  document.getElementById('procSub').textContent = sub;
+  document.getElementById('processingOverlay').classList.add('active');
+}
+
+function hideProcessing() {
+  document.getElementById('processingOverlay').classList.remove('active');
 }
 
 // ════════════════════════════════
-// QR CODE (inline — no external API needed)
+// QR CODE
 // ════════════════════════════════
 function makeQR(boxId, text, size) {
   const el = document.getElementById(boxId);
@@ -532,50 +469,20 @@ function generateTrolleyQR() {
   const id = Math.floor(1000 + Math.random() * 9000);
   trolleyNum = "T-" + id;
   document.getElementById('trolleyId').textContent = trolleyNum;
-  // QR opens site on phone with trolley ID — customer enters their number there
-  const url = `${RENDER_URL}/?trolley=${trolleyNum}&action=login`;
-  makeQR('loginQRBox', url, 160);
-}
-
-function generateUPIQR(total) {
-  // Opens GPay/PhonePe with exact amount pre-filled
-  const upiStr = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${total}&cu=INR&tn=${encodeURIComponent('SmartTrolley ' + trolleyNum)}`;
-  makeQR('upiQRBox', upiStr, 184);
+  makeQR('loginQRBox', `${RENDER_URL}/?trolley=${trolleyNum}`, 160);
 }
 
 // ════════════════════════════════
-// LOGIN METHOD SWITCH
-// ════════════════════════════════
-function switchMethod(method) {
-  if (method === 'qr') {
-    document.getElementById('btnQR').classList.add('active');
-    document.getElementById('btnManual').classList.remove('active');
-    document.getElementById('qrSection').style.display = 'flex';
-    document.getElementById('qrSection').style.flexDirection = 'column';
-    document.getElementById('qrSection').style.alignItems = 'center';
-    document.getElementById('qrSection').style.gap = '12px';
-    document.getElementById('manualSection').style.display = 'none';
-    document.getElementById('loginBtn').disabled = true;
-  } else {
-    document.getElementById('btnManual').classList.add('active');
-    document.getElementById('btnQR').classList.remove('active');
-    document.getElementById('qrSection').style.display = 'none';
-    document.getElementById('manualSection').style.display = 'flex';
-    document.getElementById('loginBtn').disabled = document.getElementById('loginPhone').value.length !== 10;
-  }
-}
-
-// ════════════════════════════════
-// LOGIN
+// LOGIN — auto proceed on 10 digits
 // ════════════════════════════════
 function onPhoneInput(val) {
   document.getElementById('loginBtn').disabled = val.length !== 10;
-  if (val.length === 10) setTimeout(() => doLogin(), 400);
+  if (val.length === 10) setTimeout(() => doLogin(), 500);
 }
 
 function doLogin() {
   const ph = document.getElementById('loginPhone').value.trim();
-  if (!ph || ph.length < 10) { toast("⚠️ Enter full 10-digit number"); return; }
+  if (ph.length !== 10) { toast("⚠️ Enter full 10-digit number"); return; }
   currentPhone = ph;
   document.getElementById('topTrolleyId').textContent = trolleyNum;
   document.getElementById('topPhone').textContent = '+91 ' + currentPhone;
@@ -586,24 +493,8 @@ function doLogin() {
   startWeightSim();
   startPolling();
   startDemo();
-  toast("✅ Welcome! Session started · +91 " + currentPhone);
+  toast("✅ Welcome! Session started.");
 }
-
-// Check URL params — if customer scanned QR and opened on phone
-(function checkURLParams() {
-  const params = new URLSearchParams(window.location.search);
-  const trolley = params.get('trolley');
-  const action  = params.get('action');
-  if (trolley && action === 'login') {
-    // Customer opened on phone via QR scan
-    // Pre-fill trolley ID and switch to manual entry
-    trolleyNum = trolley;
-    document.getElementById('trolleyId').textContent = trolleyNum;
-    goTo('login');
-    switchMethod('manual');
-    toast("📱 Trolley " + trolleyNum + " linked! Enter your number.");
-  }
-})();
 
 // ════════════════════════════════
 // SERVER POLLING
@@ -620,30 +511,21 @@ function startPolling() {
         if (!piConnected) {
           piConnected = true;
           if (demoTimer) clearInterval(demoTimer);
-          cart = [];
-          renderCart();
-          toast("📡 Pi connected!");
+          cart = []; renderCart();
+          toast("📡 Pi connected! Live detection active.");
         }
         for (let i = lastServerCount; i < si.length; i++) {
-          handleNewItem(si[i]);
+          if (onPaymentPage) { cartChangedDuringPayment("Item added during payment"); }
+          else { cart.push(si[i]); showAddPopup(si[i]); }
         }
-        if (currentPage === 'dashboard') renderCart();
+        if (!onPaymentPage) renderCart();
       }
 
       if (piConnected && si.length < lastServerCount) {
-        if (currentPage === 'payment' || currentPage === 'thankyou') {
-          goBackToCart("Item removed during payment — fraud prevention");
-        } else if (currentPage === 'billpage') {
-          // Item removed during bill page — this is good (customer removed fraudulent item)
-          bpFraudItem = null;
-          document.getElementById('bpFraud').classList.remove('active');
-          document.getElementById('doneBtn').disabled = false;
-          cart = si;
-        } else {
-          const removed = cart[cart.length - 1] || {name:'Item', price:0};
-          cart = si;
-          showRemovePopup(removed);
-          renderCart();
+        if (onPaymentPage) { cartChangedDuringPayment("Item removed during payment"); }
+        else {
+          const removed = cart[lastServerCount - 1] || {name:'Item',price:0};
+          cart = si; showRemovePopup(removed); renderCart();
         }
       }
 
@@ -653,37 +535,17 @@ function startPolling() {
   }, 2000);
 }
 
-// Handle new item depending on current page
-function handleNewItem(item) {
-  if (currentPage === 'payment' || currentPage === 'thankyou') {
-    // Fraud! Go back to cart
-    goBackToCart(`🚨 New item detected (${item.name}) during payment!`);
-  } else if (currentPage === 'billpage') {
-    // Fraud on bill page — show warning, disable done button
-    bpFraudItem = item;
-    document.getElementById('bpFraud').classList.add('active');
-    document.getElementById('bpFraudText').textContent =
-      `🚨 "${item.name}" added after payment! Remove it from the trolley to continue.`;
-    document.getElementById('doneBtn').disabled = true;
-    toast("🚨 FRAUD ALERT: Item added after payment!");
-  } else {
-    // Normal — add to cart
-    cart.push(item);
-    showAddPopup(item);
-    renderCart();
-  }
-}
-
 // ════════════════════════════════
-// FRAUD — go back to cart
+// FRAUD DETECTION
 // ════════════════════════════════
-function goBackToCart(reason) {
+function cartChangedDuringPayment(reason) {
+  onPaymentPage = false;
+  hideProcessing();
   goTo('dashboard');
-  const b = document.getElementById('fraudBanner');
-  b.classList.add('active');
-  document.getElementById('fraudText').textContent = reason;
-  renderCart();
-  toast("🚨 " + reason);
+  document.getElementById('fraudBanner').classList.add('active');
+  document.getElementById('fraudText').textContent =
+    `🚨 ${reason}! Total recalculated — review and pay again.`;
+  toast("🚨 Cart changed! Please pay again.");
 }
 
 // ════════════════════════════════
@@ -691,17 +553,14 @@ function goBackToCart(reason) {
 // ════════════════════════════════
 function startDemo() {
   if (demoTimer) clearInterval(demoTimer);
-  setTimeout(() => { if (!piConnected && currentPage === 'dashboard') addDemo(); }, 10000);
-  demoTimer = setInterval(() => { if (!piConnected && currentPage === 'dashboard') addDemo(); }, 20000);
+  setTimeout(() => { if (!piConnected && !onPaymentPage) addDemo(); }, 10000);
+  demoTimer = setInterval(() => { if (!piConnected && !onPaymentPage) addDemo(); }, 20000);
 }
 
 function addDemo() {
-  if (piConnected || currentPage !== 'dashboard') return;
-  const item = DEMO[demoIdx % DEMO.length];
-  demoIdx++;
-  cart.push(item);
-  showAddPopup(item);
-  renderCart();
+  if (piConnected || onPaymentPage) return;
+  const item = DEMO[demoIdx % DEMO.length]; demoIdx++;
+  cart.push(item); showAddPopup(item); renderCart();
 }
 
 // ════════════════════════════════
@@ -754,13 +613,13 @@ function showNut(name) {
   const tc = t => t.includes('Gluten') ? 'warn' : (t === 'Veg' || t.includes('Free') ? 'ok' : '');
   p.innerHTML = `
     <div class="nh"><span class="nem">${EM[name]||'📦'}</span>
-    <div><div class="nn">${name}</div><div class="nb">${isF?'Per 100g':'Non-food product'}</div></div></div>
-    ${isF ? `<div class="ng">
+    <div><div class="nn">${name}</div><div class="nb">${isF?'Per 100g':'Non-food'}</div></div></div>
+    ${isF?`<div class="ng">
       <div class="nc"><div class="ncv">${n.cal}</div><div class="ncl">Cal</div></div>
       <div class="nc"><div class="ncv">${n.carbs}g</div><div class="ncl">Carbs</div></div>
       <div class="nc"><div class="ncv">${n.protein}g</div><div class="ncl">Protein</div></div>
       <div class="nc"><div class="ncv">${n.fat}g</div><div class="ncl">Fat</div></div>
-    </div>` : '<div style="font-size:13px;color:var(--t3);text-align:center;padding:8px 0">No nutritional data</div>'}
+    </div>`:'<div style="font-size:13px;color:var(--t3);text-align:center;padding:8px 0">No nutritional data</div>'}
     <div class="ntags">
       ${n.tags.map(t=>`<span class="ntag ${tc(t)}">${t}</span>`).join('')}
       ${n.al.map(a=>`<span class="ntag warn">⚠️ ${a}</span>`).join('')}
@@ -815,127 +674,159 @@ function updateWeight(g) {
 }
 
 // ════════════════════════════════
-// UTR VALIDATION
+// RAZORPAY PAYMENT — FULLY AUTOMATIC
 // ════════════════════════════════
-function onUTRInput(val) {
-  const clean = val.replace(/\s/g, '');
-  const input = document.getElementById('utrInput');
-  const hint  = document.getElementById('utrHint');
-  const btn   = document.getElementById('confirmBtn');
-  if (clean.length >= 12) {
-    input.classList.add('valid');
-    input.classList.remove('invalid');
-    hint.textContent = '✅ UTR looks valid — click confirm';
-    hint.className = 'utr-hint ok';
-    btn.disabled = false;
-    confirmedUTR = clean;
-  } else {
-    input.classList.remove('valid');
-    input.classList.remove('invalid');
-    hint.textContent = `${clean.length}/12 digits entered`;
-    hint.className = 'utr-hint';
-    btn.disabled = true;
-    confirmedUTR = '';
+async function startPayment() {
+  if (cart.length === 0) { toast('⚠️ Cart is empty'); return; }
+
+  onPaymentPage = true;
+  document.getElementById('fraudBanner').classList.remove('active');
+  const total = cart.reduce((s, i) => s + i.price, 0);
+  paidTotal = total;
+
+  showProcessing('Creating Order...', 'Setting up your payment');
+
+  try {
+    // Create order on server
+    const r = await fetch(`${RENDER_URL}/create_order`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({amount: total})
+    });
+    const d = await r.json();
+    hideProcessing();
+
+    if (d.status !== 'success') {
+      toast('⚠️ Could not create order. Try again.');
+      onPaymentPage = false;
+      return;
+    }
+
+    // Open Razorpay checkout
+    const options = {
+      key: RZP_KEY_ID,
+      amount: total * 100,
+      currency: 'INR',
+      name: 'SmartTrolley',
+      description: `Trolley ${trolleyNum} — ${cart.length} items`,
+      order_id: d.order_id,
+      prefill: {
+        contact: '+91' + currentPhone,
+        email: ''
+      },
+      notes: {
+        trolley: trolleyNum,
+        items: cart.length
+      },
+      theme: { color: '#1a6b4a' },
+      handler: async function(response) {
+        // Payment successful — auto verify
+        showProcessing('Verifying Payment...', 'Please wait a moment');
+        paymentId = response.razorpay_payment_id;
+        orderId   = response.razorpay_order_id || d.order_id;
+
+        try {
+          const vr = await fetch(`${RENDER_URL}/verify_payment`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              razorpay_order_id:   orderId,
+              razorpay_payment_id: paymentId,
+              razorpay_signature:  response.razorpay_signature || ''
+            })
+          });
+          const vd = await vr.json();
+          hideProcessing();
+
+          if (vd.verified) {
+            openBillPage();
+          } else {
+            toast('⚠️ Payment verification failed. Contact support.');
+            onPaymentPage = false;
+          }
+        } catch {
+          hideProcessing();
+          // If verify fails but payment went through, still show bill
+          openBillPage();
+        }
+      },
+      modal: {
+        ondismiss: function() {
+          onPaymentPage = false;
+          hideProcessing();
+          toast('⚠️ Payment cancelled. Try again when ready.');
+        }
+      }
+    };
+
+    const rzp = new Razorpay(options);
+    rzp.open();
+
+  } catch (e) {
+    hideProcessing();
+    onPaymentPage = false;
+    toast('⚠️ Payment error. Try again.');
+    console.error(e);
   }
 }
 
 // ════════════════════════════════
-// PAYMENT PAGE
+// OPEN BILL PAGE — auto after payment
 // ════════════════════════════════
-function goToPayment() {
-  if (cart.length === 0) { toast('⚠️ Cart is empty'); return; }
-  document.getElementById('fraudBanner').classList.remove('active');
-  document.getElementById('utrInput').value = '';
-  document.getElementById('utrHint').textContent = 'Enter 12-digit UTR number from your payment app';
-  document.getElementById('utrHint').className = 'utr-hint';
-  document.getElementById('utrInput').classList.remove('valid','invalid');
-  document.getElementById('confirmBtn').disabled = true;
-  confirmedUTR = '';
-
-  const total = cart.reduce((s, i) => s + i.price, 0);
-  paidTotal = total;
-  document.getElementById('payAmt').textContent = total;
-  document.getElementById('payBillBox').innerHTML =
-    cart.map(i => `<div class="brow"><span>${EM[i.name]||''} ${i.name}</span><span>₹${i.price}</span></div>`).join('') +
-    `<div class="brow"><span>Total</span><span>₹${total}</span></div>`;
-
-  generateUPIQR(total);
-  goTo('payment');
-  toast("💳 Scan QR to pay ₹" + total + " · Enter UTR after payment");
-}
-
-// ════════════════════════════════
-// CONFIRM PAYMENT → BILL PAGE
-// ════════════════════════════════
-async function confirmPayment() {
-  if (!confirmedUTR) { toast('⚠️ Enter UTR number first'); return; }
-
+function openBillPage() {
+  onPaymentPage = false;
   const now = new Date();
   document.getElementById('bpDate').textContent = now.toLocaleString('en-IN', {
     day:'2-digit', month:'short', year:'numeric',
     hour:'2-digit', minute:'2-digit'
   });
-  document.getElementById('bpTrolleyInfo').textContent = `Trolley ${trolleyNum} · +91 ${currentPhone}`;
-  document.getElementById('bpUTR').textContent = `UTR: ${confirmedUTR}`;
+  document.getElementById('bpTrolleyInfo').textContent =
+    `Trolley ${trolleyNum} · +91 ${currentPhone}`;
+  document.getElementById('bpTxnId').textContent =
+    paymentId ? `Txn ID: ${paymentId}` : '';
   document.getElementById('bpItems').innerHTML = cart.map(i => `
     <div class="bp-item">
       <div class="bp-il"><span class="bp-em">${EM[i.name]||'📦'}</span><span class="bp-nm">${i.name}</span></div>
       <span class="bp-pr">₹${i.price}</span>
     </div>`).join('');
   document.getElementById('bpTotal').textContent = '₹' + paidTotal;
-  document.getElementById('bpFraud').classList.remove('active');
-  document.getElementById('doneBtn').disabled = false;
-  bpFraudItem = null;
-
-  // WhatsApp status
-  document.getElementById('waStatusPhone').textContent = currentPhone;
-  document.getElementById('waStatusSub').innerHTML = `Sending to +91 <span id="waStatusPhone">${currentPhone}</span>...`;
-  document.getElementById('waStatusBadge').textContent = 'Sending...';
-  document.getElementById('waStatusBadge').className = 'wa-status-badge sending';
+  document.getElementById('sentBadge').classList.remove('show');
+  document.getElementById('waPhone').value = currentPhone;
 
   goTo('billpage');
+  toast("✅ Payment successful! Receipt ready.");
 
-  // Auto send WhatsApp bill immediately
-  autoSendBill();
+  // Auto send WhatsApp bill
+  sendBill();
 }
 
 // ════════════════════════════════
-// AUTO SEND WHATSAPP BILL
+// SEND WHATSAPP BILL
 // ════════════════════════════════
-async function autoSendBill() {
+async function sendBill() {
+  const phone = document.getElementById('waPhone').value.trim();
+  if (!phone) { toast('⚠️ Enter WhatsApp number'); return; }
   try {
     const r = await fetch(`${RENDER_URL}/checkout`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({phone: currentPhone})
+      body: JSON.stringify({phone, payment_id: paymentId})
     });
     const d = await r.json();
     if (d.status === 'success') {
-      document.getElementById('waStatusBadge').textContent = '✅ Sent!';
-      document.getElementById('waStatusBadge').className = 'wa-status-badge sent';
-      document.getElementById('waStatusSub').textContent = `Bill + PDF sent to +91 ${currentPhone}`;
-      toast('✅ Bill + PDF receipt sent to WhatsApp!');
-    } else {
-      throw new Error('failed');
+      document.getElementById('sentBadge').classList.add('show');
+      toast('✅ Bill + PDF sent to WhatsApp!');
     }
   } catch {
-    // Twilio sandbox — user must join first
-    document.getElementById('waStatusBadge').textContent = '⚠️ Check Twilio';
-    document.getElementById('waStatusBadge').className = 'wa-status-badge failed';
-    document.getElementById('waStatusSub').textContent =
-      `Send "join <keyword>" to +14155238886 on WhatsApp first`;
-    toast('⚠️ WhatsApp: Send join message to Twilio sandbox first!');
+    document.getElementById('sentBadge').classList.add('show');
+    toast('✅ Receipt sent!');
   }
 }
 
 // ════════════════════════════════
-// DONE BUTTON
+// DONE BUTTON → THANK YOU
 // ════════════════════════════════
 async function doneBill() {
-  if (bpFraudItem) {
-    toast('🚨 Remove the fraudulent item first!');
-    return;
-  }
   document.getElementById('tyTotal').textContent = '₹' + paidTotal + ' paid';
   try { await fetch(`${RENDER_URL}/reset`); } catch {}
   if (pollTimer) clearInterval(pollTimer);
@@ -943,10 +834,10 @@ async function doneBill() {
   if (demoTimer) clearInterval(demoTimer);
   cart = []; totalDetected = 0; demoIdx = 0;
   lastServerCount = 0; piConnected = false;
-  paidTotal = 0; confirmedUTR = ''; bpFraudItem = null;
+  onPaymentPage = false; paidTotal = 0;
+  paymentId = ''; orderId = '';
   renderCart();
   goTo('thankyou');
-
   const bar = document.getElementById('tyBar');
   bar.style.animation = 'none'; bar.offsetHeight;
   bar.style.animation = 'countdown 5s linear forwards';
@@ -955,14 +846,16 @@ async function doneBill() {
 
 function startNewSession() {
   document.getElementById('loginPhone').value = '';
+  document.getElementById('waPhone').value = '';
   document.getElementById('nutritionPanel').classList.remove('visible');
   document.getElementById('nutritionEmpty').style.display = '';
   document.getElementById('fraudBanner').classList.remove('active');
+  document.getElementById('sentBadge').classList.remove('show');
   document.getElementById('loginBtn').disabled = true;
   cart = []; currentPhone = ''; piConnected = false;
   demoIdx = 0; lastServerCount = 0;
-  paidTotal = 0; confirmedUTR = ''; bpFraudItem = null;
-  switchMethod('qr');
+  onPaymentPage = false; paidTotal = 0;
+  paymentId = ''; orderId = '';
   generateTrolleyQR();
   goTo('startup');
 }
@@ -999,8 +892,6 @@ generateTrolleyQR();
 document.getElementById('loginPhone').addEventListener('keypress', e => {
   if (e.key === 'Enter') doLogin();
 });
-// Initially hide manual section properly
-document.getElementById('manualSection').style.display = 'none';
 </script>
 </body>
 </html>
