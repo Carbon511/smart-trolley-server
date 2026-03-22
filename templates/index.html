@@ -73,9 +73,10 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .inp{flex:1;background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--rs);padding:12px 15px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--t);outline:none;transition:all 0.2s;}
 .inp:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(26,107,74,0.1);background:#fff;}
 .inp::placeholder{color:var(--t3);}
-.lbtn{width:100%;background:var(--green);color:#fff;border:none;padding:15px;border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;opacity:0.4;}
-.lbtn:not(:disabled){opacity:1;}
-.lbtn:hover:not(:disabled){background:var(--gd);}
+.inp-hint{font-size:12px;color:var(--t3);align-self:flex-start;}
+.lbtn{width:100%;background:var(--green);color:#fff;border:none;padding:15px;border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.lbtn:hover{background:var(--gd);}
+.lbtn:disabled{background:var(--border);color:var(--t3);cursor:not-allowed;}
 
 /* DASHBOARD */
 #dashboard{flex-direction:column;background:var(--bg);}
@@ -162,7 +163,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .pbtn:disabled{background:var(--border);color:var(--t3);box-shadow:none;transform:none;cursor:not-allowed;}
 
 /* PROCESSING OVERLAY */
-#processingOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;}
+#processingOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9000;display:none;flex-direction:column;align-items:center;justify-content:center;}
 #processingOverlay.active{display:flex;}
 .proc-card{background:#fff;border-radius:20px;padding:36px 48px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;}
 .proc-spinner{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite;}
@@ -181,8 +182,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .bp-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
 .bp-item:last-child{border:none;}
 .bp-il{display:flex;align-items:center;gap:10px;}
-.bp-em{font-size:20px;}
-.bp-nm{font-size:14px;font-weight:500;}
+.bp-em{font-size:20px;}.bp-nm{font-size:14px;font-weight:500;}
 .bp-pr{font-size:14px;font-weight:600;color:var(--green);}
 .bp-total-row{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0 0;border-top:2px solid var(--border);}
 .bp-tl{font-size:14px;color:var(--t2);}
@@ -235,7 +235,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 
 <!-- LOGIN -->
 <div id="login" class="screen">
-  <div class="lh"><h2>Link Your Trolley</h2><p>Enter your WhatsApp number to start</p></div>
+  <div class="lh"><h2>Link Your Trolley</h2><p>Enter your WhatsApp number to receive your bill</p></div>
   <div class="lcard">
     <div class="tidbadge">🛒 Trolley #<span id="trolleyId">T-0000</span></div>
     <div class="qrf">
@@ -248,9 +248,10 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
     <div class="div">enter your WhatsApp number</div>
     <div class="prow">
       <div class="ppre">🇮🇳 +91</div>
-      <input class="inp" id="loginPhone" type="tel" placeholder="10-digit WhatsApp number" maxlength="10" oninput="onPhoneInput(this.value)">
+      <input class="inp" id="loginPhone" type="tel" placeholder="10-digit number" maxlength="10" oninput="onPhoneInput(this.value)">
     </div>
-    <button class="lbtn" id="loginBtn" onclick="doLogin()" disabled>Start Shopping →</button>
+    <p class="inp-hint" id="phoneHint">Enter your number then click OK to continue</p>
+    <button class="lbtn" id="loginBtn" onclick="doLogin()" disabled>OK — Start Shopping →</button>
   </div>
 </div>
 
@@ -327,7 +328,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 <div id="processingOverlay">
   <div class="proc-card">
     <div class="proc-spinner"></div>
-    <div class="proc-title" id="procTitle">Processing Payment</div>
+    <div class="proc-title" id="procTitle">Processing</div>
     <div class="proc-sub" id="procSub">Please wait...</div>
   </div>
 </div>
@@ -339,15 +340,12 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
       <div class="bp-header">
         <div class="bp-logo">🛒 SmartTrolley</div>
         <div class="bp-date" id="bpDate">—</div>
-        <div class="bp-trolley" id="bpTrolleyInfo">Trolley — Customer</div>
+        <div class="bp-trolley" id="bpTrolleyInfo">—</div>
         <div class="bp-paid-badge">✅ Payment Verified</div>
       </div>
       <div id="bpItems"></div>
       <div class="bp-total-row">
-        <div>
-          <div class="bp-tl">Amount Paid</div>
-          <div class="bp-txn" id="bpTxnId">—</div>
-        </div>
+        <div><div class="bp-tl">Amount Paid</div><div class="bp-txn" id="bpTxnId"></div></div>
         <span class="bp-tn" id="bpTotal">₹0</span>
       </div>
     </div>
@@ -378,42 +376,20 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 <div class="toast" id="toast"></div>
 
 <script>
-// ════════════════════════════════
-// CONFIG
-// ════════════════════════════════
-const RENDER_URL    = "https://smart-trolley-owlx.onrender.com";
-const RZP_KEY_ID    = "rzp_live_SULbMnyyuHNunP";
-const UPI_ID        = "sherinsajan784-2@oksbi";
+const RENDER_URL = "https://smart-trolley-owlx.onrender.com";
+const RZP_KEY_ID = "rzp_live_SULbMnyyuHNunP";
 
-// ════════════════════════════════
-// STATE
-// ════════════════════════════════
-let cart = [];
-let totalDetected   = 0;
-let currentPhone    = "";
-let trolleyNum      = "";
-let pollTimer       = null;
-let weightTimer     = null;
-let demoTimer       = null;
-let lastWeight      = 0;
-let piConnected     = false;
-let demoIdx         = 0;
-let lastServerCount = 0;
-let onPaymentPage   = false;
-let paidTotal       = 0;
-let paymentId       = "";
-let orderId         = "";
-let addPopTimer     = null;
-let removePopTimer  = null;
+let cart=[],totalDetected=0,currentPhone="",trolleyNum="";
+let pollTimer=null,weightTimer=null,demoTimer=null;
+let lastWeight=0,piConnected=false,demoIdx=0,lastServerCount=0;
+let onPaymentPage=false,paidTotal=0,paymentId="",orderId="";
+let addPopTimer=null,removePopTimer=null;
 
-// ════════════════════════════════
-// DATA
-// ════════════════════════════════
-const DEMO = [
+const DEMO=[
   {name:"Sprite 400ml",price:30},{name:"Maggi 140g",price:25},
   {name:"krackjack 120g",price:20},{name:"Garnier Men",price:199},{name:"Globe Cream",price:85}
 ];
-const NUT = {
+const NUT={
   "Book Record":      {cal:0,carbs:0,protein:0,fat:0,tags:["Stationery"],al:[]},
   "Brustro Pencils":  {cal:0,carbs:0,protein:0,fat:0,tags:["Art Supply"],al:[]},
   "Garnier Men":      {cal:0,carbs:0,protein:0,fat:0,tags:["Skincare","Paraben-Free"],al:["Fragrance"]},
@@ -427,192 +403,161 @@ const NUT = {
   "Globe Cream":      {cal:0,carbs:0,protein:0,fat:0,tags:["Skincare"],al:["Fragrance"]},
   "Soudal paint":     {cal:0,carbs:0,protein:0,fat:0,tags:["Hardware","Non-edible"],al:[]}
 };
-const EM = {
+const EM={
   "Book Record":"📒","Brustro Pencils":"✏️","Garnier Men":"🧴",
   "krackjack 120g":"🍪","krackjack 180g":"🍪","Sprite 1L":"🥤",
   "Sprite 400ml":"🥤","Maggi 140g":"🍜","Maggi 280g":"🍜",
   "iva Liquid 500ml":"🧼","Globe Cream":"🧴","Soudal paint":"🎨"
 };
 
-// ════════════════════════════════
-// NAVIGATION
-// ════════════════════════════════
-function goTo(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
 
-function showProcessing(title, sub) {
-  document.getElementById('procTitle').textContent = title;
-  document.getElementById('procSub').textContent = sub;
+function showProcessing(title,sub){
+  document.getElementById('procTitle').textContent=title;
+  document.getElementById('procSub').textContent=sub;
   document.getElementById('processingOverlay').classList.add('active');
 }
-
-function hideProcessing() {
+function hideProcessing(){
   document.getElementById('processingOverlay').classList.remove('active');
 }
 
-// ════════════════════════════════
-// QR CODE
-// ════════════════════════════════
-function makeQR(boxId, text, size) {
-  const el = document.getElementById(boxId);
-  el.innerHTML = '';
-  new QRCode(el, {
-    text, width: size, height: size,
-    colorDark: "#000000", colorLight: "#ffffff",
-    correctLevel: QRCode.CorrectLevel.M
-  });
+function makeQR(boxId,text,size){
+  const el=document.getElementById(boxId);
+  el.innerHTML='';
+  new QRCode(el,{text,width:size,height:size,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
 }
 
-function generateTrolleyQR() {
-  const id = Math.floor(1000 + Math.random() * 9000);
-  trolleyNum = "T-" + id;
-  document.getElementById('trolleyId').textContent = trolleyNum;
-  makeQR('loginQRBox', `${RENDER_URL}/?trolley=${trolleyNum}`, 160);
+function generateTrolleyQR(){
+  const id=Math.floor(1000+Math.random()*9000);
+  trolleyNum="T-"+id;
+  document.getElementById('trolleyId').textContent=trolleyNum;
+  makeQR('loginQRBox',`${RENDER_URL}/?trolley=${trolleyNum}`,160);
 }
 
-// ════════════════════════════════
-// LOGIN — auto proceed on 10 digits
-// ════════════════════════════════
-function onPhoneInput(val) {
-  document.getElementById('loginBtn').disabled = val.length !== 10;
-  if (val.length === 10) setTimeout(() => doLogin(), 500);
+// ── LOGIN — only proceeds when OK button clicked ──
+function onPhoneInput(val){
+  const btn=document.getElementById('loginBtn');
+  const hint=document.getElementById('phoneHint');
+  if(val.length===10){
+    btn.disabled=false;
+    hint.textContent='✅ Number ready — click OK to continue';
+    hint.style.color='var(--green)';
+  } else if(val.length>0){
+    btn.disabled=true;
+    hint.textContent=`${10-val.length} more digits needed`;
+    hint.style.color='var(--t3)';
+  } else {
+    btn.disabled=true;
+    hint.textContent='Enter your number then click OK to continue';
+    hint.style.color='var(--t3)';
+  }
 }
 
-function doLogin() {
-  const ph = document.getElementById('loginPhone').value.trim();
-  if (ph.length !== 10) { toast("⚠️ Enter full 10-digit number"); return; }
-  currentPhone = ph;
-  document.getElementById('topTrolleyId').textContent = trolleyNum;
-  document.getElementById('topPhone').textContent = '+91 ' + currentPhone;
-  document.getElementById('userInit').textContent = currentPhone[0];
+function doLogin(){
+  const ph=document.getElementById('loginPhone').value.trim();
+  if(ph.length!==10){toast("⚠️ Enter full 10-digit number");return;}
+  currentPhone=ph;
+  document.getElementById('topTrolleyId').textContent=trolleyNum;
+  document.getElementById('topPhone').textContent='+91 '+currentPhone;
+  document.getElementById('userInit').textContent=currentPhone[0];
   document.getElementById('fraudBanner').classList.remove('active');
   goTo('dashboard');
-  simFPS();
-  startWeightSim();
-  startPolling();
-  startDemo();
-  toast("✅ Welcome! Session started.");
+  simFPS();startWeightSim();startPolling();startDemo();
+  toast("✅ Welcome! Session started for +91 "+currentPhone);
 }
 
-// ════════════════════════════════
-// SERVER POLLING
-// ════════════════════════════════
-function startPolling() {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(async () => {
-    try {
-      const r = await fetch(`${RENDER_URL}/cart`);
-      const d = await r.json();
-      const si = d.items || [];
-
-      if (si.length > lastServerCount) {
-        if (!piConnected) {
-          piConnected = true;
-          if (demoTimer) clearInterval(demoTimer);
-          cart = []; renderCart();
+function startPolling(){
+  if(pollTimer)clearInterval(pollTimer);
+  pollTimer=setInterval(async()=>{
+    try{
+      const r=await fetch(`${RENDER_URL}/cart`);
+      const d=await r.json();
+      const si=d.items||[];
+      if(si.length>lastServerCount){
+        if(!piConnected){
+          piConnected=true;
+          if(demoTimer)clearInterval(demoTimer);
+          cart=[];renderCart();
           toast("📡 Pi connected! Live detection active.");
         }
-        for (let i = lastServerCount; i < si.length; i++) {
-          if (onPaymentPage) { cartChangedDuringPayment("Item added during payment"); }
-          else { cart.push(si[i]); showAddPopup(si[i]); }
+        for(let i=lastServerCount;i<si.length;i++){
+          if(onPaymentPage){cartChangedDuringPayment("Item added during payment");}
+          else{cart.push(si[i]);showAddPopup(si[i]);}
         }
-        if (!onPaymentPage) renderCart();
+        if(!onPaymentPage)renderCart();
       }
-
-      if (piConnected && si.length < lastServerCount) {
-        if (onPaymentPage) { cartChangedDuringPayment("Item removed during payment"); }
-        else {
-          const removed = cart[lastServerCount - 1] || {name:'Item',price:0};
-          cart = si; showRemovePopup(removed); renderCart();
+      if(piConnected&&si.length<lastServerCount){
+        if(onPaymentPage){cartChangedDuringPayment("Item removed during payment");}
+        else{
+          const removed=cart[lastServerCount-1]||{name:'Item',price:0};
+          cart=si;showRemovePopup(removed);renderCart();
         }
       }
-
-      lastServerCount = si.length;
-      if (d.weight && d.weight > 0 && piConnected) updateWeight(d.weight);
-    } catch {}
-  }, 2000);
+      lastServerCount=si.length;
+      if(d.weight&&d.weight>0&&piConnected)updateWeight(d.weight);
+    }catch{}
+  },2000);
 }
 
-// ════════════════════════════════
-// FRAUD DETECTION
-// ════════════════════════════════
-function cartChangedDuringPayment(reason) {
-  onPaymentPage = false;
-  hideProcessing();
+function cartChangedDuringPayment(reason){
+  onPaymentPage=false;hideProcessing();
   goTo('dashboard');
   document.getElementById('fraudBanner').classList.add('active');
-  document.getElementById('fraudText').textContent =
-    `🚨 ${reason}! Total recalculated — review and pay again.`;
+  document.getElementById('fraudText').textContent=`🚨 ${reason}! Total recalculated — review and pay again.`;
   toast("🚨 Cart changed! Please pay again.");
 }
 
-// ════════════════════════════════
-// DEMO MODE
-// ════════════════════════════════
-function startDemo() {
-  if (demoTimer) clearInterval(demoTimer);
-  setTimeout(() => { if (!piConnected && !onPaymentPage) addDemo(); }, 10000);
-  demoTimer = setInterval(() => { if (!piConnected && !onPaymentPage) addDemo(); }, 20000);
+function startDemo(){
+  if(demoTimer)clearInterval(demoTimer);
+  setTimeout(()=>{if(!piConnected&&!onPaymentPage)addDemo();},10000);
+  demoTimer=setInterval(()=>{if(!piConnected&&!onPaymentPage)addDemo();},20000);
+}
+function addDemo(){
+  if(piConnected||onPaymentPage)return;
+  const item=DEMO[demoIdx%DEMO.length];demoIdx++;
+  cart.push(item);showAddPopup(item);renderCart();
 }
 
-function addDemo() {
-  if (piConnected || onPaymentPage) return;
-  const item = DEMO[demoIdx % DEMO.length]; demoIdx++;
-  cart.push(item); showAddPopup(item); renderCart();
-}
-
-// ════════════════════════════════
-// DETECTION POPUPS
-// ════════════════════════════════
-function showAddPopup(item) {
+function showAddPopup(item){
   totalDetected++;
-  document.getElementById('detCount').textContent = totalDetected;
-  document.getElementById('detStatus').textContent = "Added!";
-  document.getElementById('confStat').textContent = (60 + Math.random() * 35).toFixed(0) + '%';
-  document.getElementById('addIcon').textContent = EM[item.name] || '📦';
-  document.getElementById('addName').textContent = item.name;
-  document.getElementById('addPrice').textContent = '₹' + item.price;
-  const pop = document.getElementById('addPopup');
-  pop.style.display = 'flex';
-  pop.style.animation = 'none'; pop.offsetHeight;
-  pop.style.animation = 'popGreen 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
-  if (addPopTimer) clearTimeout(addPopTimer);
-  addPopTimer = setTimeout(() => {
-    pop.style.display = 'none';
-    document.getElementById('detStatus').textContent = 'Scanning';
-  }, 3500);
+  document.getElementById('detCount').textContent=totalDetected;
+  document.getElementById('detStatus').textContent="Added!";
+  document.getElementById('confStat').textContent=(60+Math.random()*35).toFixed(0)+'%';
+  document.getElementById('addIcon').textContent=EM[item.name]||'📦';
+  document.getElementById('addName').textContent=item.name;
+  document.getElementById('addPrice').textContent='₹'+item.price;
+  const pop=document.getElementById('addPopup');
+  pop.style.display='flex';pop.style.animation='none';pop.offsetHeight;
+  pop.style.animation='popGreen 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
+  if(addPopTimer)clearTimeout(addPopTimer);
+  addPopTimer=setTimeout(()=>{pop.style.display='none';document.getElementById('detStatus').textContent='Scanning';},3500);
   showNut(item.name);
   toast(`🛒 ${item.name} added — ₹${item.price}`);
 }
 
-function showRemovePopup(item) {
-  document.getElementById('removeIcon').textContent = EM[item.name] || '🗑️';
-  document.getElementById('removeName').textContent = item.name;
-  document.getElementById('removePrice').textContent = '₹' + item.price;
-  const pop = document.getElementById('removePopup');
-  pop.style.display = 'flex';
-  pop.style.animation = 'none'; pop.offsetHeight;
-  pop.style.animation = 'popRed 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
-  if (removePopTimer) clearTimeout(removePopTimer);
-  removePopTimer = setTimeout(() => { pop.style.display = 'none'; }, 3500);
+function showRemovePopup(item){
+  document.getElementById('removeIcon').textContent=EM[item.name]||'🗑️';
+  document.getElementById('removeName').textContent=item.name;
+  document.getElementById('removePrice').textContent='₹'+item.price;
+  const pop=document.getElementById('removePopup');
+  pop.style.display='flex';pop.style.animation='none';pop.offsetHeight;
+  pop.style.animation='popRed 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
+  if(removePopTimer)clearTimeout(removePopTimer);
+  removePopTimer=setTimeout(()=>{pop.style.display='none';},3500);
   toast(`🗑️ ${item.name} removed`);
 }
 
-// ════════════════════════════════
-// NUTRITION
-// ════════════════════════════════
-function showNut(name) {
-  const n = NUT[name]; if (!n) return;
-  document.getElementById('nutritionEmpty').style.display = 'none';
-  document.getElementById('nutLabel').textContent = name;
-  const p = document.getElementById('nutritionPanel');
-  p.classList.add('visible');
-  const isF = n.cal > 0;
-  const tc = t => t.includes('Gluten') ? 'warn' : (t === 'Veg' || t.includes('Free') ? 'ok' : '');
-  p.innerHTML = `
-    <div class="nh"><span class="nem">${EM[name]||'📦'}</span>
+function showNut(name){
+  const n=NUT[name];if(!n)return;
+  document.getElementById('nutritionEmpty').style.display='none';
+  document.getElementById('nutLabel').textContent=name;
+  const p=document.getElementById('nutritionPanel');p.classList.add('visible');
+  const isF=n.cal>0;
+  const tc=t=>t.includes('Gluten')?'warn':(t==='Veg'||t.includes('Free')?'ok':'');
+  p.innerHTML=`<div class="nh"><span class="nem">${EM[name]||'📦'}</span>
     <div><div class="nn">${name}</div><div class="nb">${isF?'Per 100g':'Non-food'}</div></div></div>
     ${isF?`<div class="ng">
       <div class="nc"><div class="ncv">${n.cal}</div><div class="ncl">Cal</div></div>
@@ -626,20 +571,17 @@ function showNut(name) {
     </div>`;
 }
 
-// ════════════════════════════════
-// RENDER CART
-// ════════════════════════════════
-function renderCart() {
-  const l = document.getElementById('cartList');
-  const total = cart.reduce((s, i) => s + i.price, 0);
-  document.getElementById('cartBadge').textContent = cart.length;
-  document.getElementById('totalNum').textContent = '₹' + total;
-  document.getElementById('payBtn').disabled = cart.length === 0;
-  if (!cart.length) {
-    l.innerHTML = '<div class="empty"><span class="ei">🛒</span><span>Cart is empty</span><span style="font-size:12px">Point camera at products</span></div>';
+function renderCart(){
+  const l=document.getElementById('cartList');
+  const total=cart.reduce((s,i)=>s+i.price,0);
+  document.getElementById('cartBadge').textContent=cart.length;
+  document.getElementById('totalNum').textContent='₹'+total;
+  document.getElementById('payBtn').disabled=cart.length===0;
+  if(!cart.length){
+    l.innerHTML='<div class="empty"><span class="ei">🛒</span><span>Cart is empty</span><span style="font-size:12px">Point camera at products</span></div>';
     return;
   }
-  l.innerHTML = cart.map((item, i) => `
+  l.innerHTML=cart.map((item,i)=>`
     <div class="crow" onclick="showNut('${item.name}')">
       <span class="re">${EM[item.name]||'📦'}</span>
       <div class="ri"><div class="rn">${item.name}</div><div class="rp">₹${item.price}</div></div>
@@ -647,250 +589,181 @@ function renderCart() {
     </div>`).join('');
 }
 
-async function removeItem(idx) {
-  const removed = cart[idx];
-  cart.splice(idx, 1);
-  if (piConnected) lastServerCount = cart.length;
-  showRemovePopup(removed);
-  renderCart();
-  try { await fetch(`${RENDER_URL}/remove/${idx}`); } catch {}
+async function removeItem(idx){
+  const removed=cart[idx];
+  cart.splice(idx,1);
+  if(piConnected)lastServerCount=cart.length;
+  showRemovePopup(removed);renderCart();
+  try{await fetch(`${RENDER_URL}/remove/${idx}`);}catch{}
 }
 
-// ════════════════════════════════
-// WEIGHT
-// ════════════════════════════════
-function updateWeight(g) {
-  document.getElementById('weightNum').innerHTML = `${g}<span class="wu">g</span>`;
-  document.getElementById('wbarFill').style.width = Math.min((g / 5000) * 100, 100) + '%';
-  const diff = Math.abs(g - lastWeight);
-  if (diff > 40) {
-    const c = document.getElementById('wstatChip');
-    const t = document.getElementById('wdeltaText');
-    if (g > lastWeight) { c.className='wsc added'; c.textContent='Added'; t.textContent=`+${diff}g`; }
-    else { c.className='wsc removed'; c.textContent='Removed'; t.textContent=`-${diff}g`; }
-    setTimeout(() => { c.className='wsc stable'; c.textContent='Stable'; t.textContent='Stable'; }, 4000);
+function updateWeight(g){
+  document.getElementById('weightNum').innerHTML=`${g}<span class="wu">g</span>`;
+  document.getElementById('wbarFill').style.width=Math.min((g/5000)*100,100)+'%';
+  const diff=Math.abs(g-lastWeight);
+  if(diff>40){
+    const c=document.getElementById('wstatChip'),t=document.getElementById('wdeltaText');
+    if(g>lastWeight){c.className='wsc added';c.textContent='Added';t.textContent=`+${diff}g`;}
+    else{c.className='wsc removed';c.textContent='Removed';t.textContent=`-${diff}g`;}
+    setTimeout(()=>{c.className='wsc stable';c.textContent='Stable';t.textContent='Stable';},4000);
   }
-  lastWeight = g;
+  lastWeight=g;
 }
 
-// ════════════════════════════════
-// RAZORPAY PAYMENT — FULLY AUTOMATIC
-// ════════════════════════════════
-async function startPayment() {
-  if (cart.length === 0) { toast('⚠️ Cart is empty'); return; }
-
-  onPaymentPage = true;
+// ── RAZORPAY PAYMENT ──
+async function startPayment(){
+  if(cart.length===0){toast('⚠️ Cart is empty');return;}
+  onPaymentPage=true;
   document.getElementById('fraudBanner').classList.remove('active');
-  const total = cart.reduce((s, i) => s + i.price, 0);
-  paidTotal = total;
-
-  showProcessing('Creating Order...', 'Setting up your payment');
-
-  try {
-    // Create order on server
-    const r = await fetch(`${RENDER_URL}/create_order`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({amount: total})
+  const total=cart.reduce((s,i)=>s+i.price,0);
+  paidTotal=total;
+  showProcessing('Creating Order...','Setting up your payment');
+  try{
+    const r=await fetch(`${RENDER_URL}/create_order`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({amount:total})
     });
-    const d = await r.json();
+    const d=await r.json();
     hideProcessing();
-
-    if (d.status !== 'success') {
-      toast('⚠️ Could not create order. Try again.');
-      onPaymentPage = false;
-      return;
+    if(d.status!=='success'){
+      toast('⚠️ Could not create order: '+d.message);
+      onPaymentPage=false;return;
     }
-
-    // Open Razorpay checkout
-    const options = {
+    const options={
       key: RZP_KEY_ID,
-      amount: total * 100,
-      currency: 'INR',
-      name: 'SmartTrolley',
-      description: `Trolley ${trolleyNum} — ${cart.length} items`,
+      amount: total*100,
+      currency:'INR',
+      name:'SmartTrolley',
+      description:`Trolley ${trolleyNum} — ${cart.length} items`,
       order_id: d.order_id,
-      prefill: {
-        contact: '+91' + currentPhone,
-        email: ''
+      prefill:{contact:'+91'+currentPhone},
+      notes:{trolley:trolleyNum},
+      theme:{color:'#1a6b4a'},
+      handler: function(response){
+        // Payment confirmed — open bill page immediately, NO waiting
+        paymentId=response.razorpay_payment_id||'';
+        orderId=response.razorpay_order_id||d.order_id;
+        onPaymentPage=false;
+        openBillPage();
       },
-      notes: {
-        trolley: trolleyNum,
-        items: cart.length
-      },
-      theme: { color: '#1a6b4a' },
-      handler: async function(response) {
-        // Payment successful — auto verify
-        showProcessing('Verifying Payment...', 'Please wait a moment');
-        paymentId = response.razorpay_payment_id;
-        orderId   = response.razorpay_order_id || d.order_id;
-
-        try {
-          const vr = await fetch(`${RENDER_URL}/verify_payment`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-              razorpay_order_id:   orderId,
-              razorpay_payment_id: paymentId,
-              razorpay_signature:  response.razorpay_signature || ''
-            })
-          });
-          const vd = await vr.json();
+      modal:{
+        ondismiss:function(){
+          onPaymentPage=false;
           hideProcessing();
-
-          if (vd.verified) {
-            openBillPage();
-          } else {
-            toast('⚠️ Payment verification failed. Contact support.');
-            onPaymentPage = false;
-          }
-        } catch {
-          hideProcessing();
-          // If verify fails but payment went through, still show bill
-          openBillPage();
-        }
-      },
-      modal: {
-        ondismiss: function() {
-          onPaymentPage = false;
-          hideProcessing();
-          toast('⚠️ Payment cancelled. Try again when ready.');
+          toast('⚠️ Payment cancelled.');
         }
       }
     };
-
-    const rzp = new Razorpay(options);
+    const rzp=new Razorpay(options);
     rzp.open();
-
-  } catch (e) {
-    hideProcessing();
-    onPaymentPage = false;
+  }catch(e){
+    hideProcessing();onPaymentPage=false;
     toast('⚠️ Payment error. Try again.');
-    console.error(e);
   }
 }
 
-// ════════════════════════════════
-// OPEN BILL PAGE — auto after payment
-// ════════════════════════════════
-function openBillPage() {
-  onPaymentPage = false;
-  const now = new Date();
-  document.getElementById('bpDate').textContent = now.toLocaleString('en-IN', {
-    day:'2-digit', month:'short', year:'numeric',
-    hour:'2-digit', minute:'2-digit'
+function openBillPage(){
+  const now=new Date();
+  document.getElementById('bpDate').textContent=now.toLocaleString('en-IN',{
+    day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'
   });
-  document.getElementById('bpTrolleyInfo').textContent =
-    `Trolley ${trolleyNum} · +91 ${currentPhone}`;
-  document.getElementById('bpTxnId').textContent =
-    paymentId ? `Txn ID: ${paymentId}` : '';
-  document.getElementById('bpItems').innerHTML = cart.map(i => `
+  document.getElementById('bpTrolleyInfo').textContent=`Trolley ${trolleyNum} · +91 ${currentPhone}`;
+  document.getElementById('bpTxnId').textContent=paymentId?`Txn: ${paymentId}`:'';
+  document.getElementById('bpItems').innerHTML=cart.map(i=>`
     <div class="bp-item">
       <div class="bp-il"><span class="bp-em">${EM[i.name]||'📦'}</span><span class="bp-nm">${i.name}</span></div>
       <span class="bp-pr">₹${i.price}</span>
     </div>`).join('');
-  document.getElementById('bpTotal').textContent = '₹' + paidTotal;
+  document.getElementById('bpTotal').textContent='₹'+paidTotal;
   document.getElementById('sentBadge').classList.remove('show');
-  document.getElementById('waPhone').value = currentPhone;
-
+  document.getElementById('waPhone').value=currentPhone;
   goTo('billpage');
   toast("✅ Payment successful! Receipt ready.");
-
-  // Auto send WhatsApp bill
   sendBill();
 }
 
-// ════════════════════════════════
-// SEND WHATSAPP BILL
-// ════════════════════════════════
-async function sendBill() {
-  const phone = document.getElementById('waPhone').value.trim();
-  if (!phone) { toast('⚠️ Enter WhatsApp number'); return; }
-  try {
-    const r = await fetch(`${RENDER_URL}/checkout`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({phone, payment_id: paymentId})
+async function sendBill(){
+  const phone=document.getElementById('waPhone').value.trim();
+  if(!phone){toast('⚠️ Enter WhatsApp number');return;}
+  try{
+    const r=await fetch(`${RENDER_URL}/checkout`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        phone,
+        items:cart,
+        total:paidTotal,
+        payment_id:paymentId
+      })
     });
-    const d = await r.json();
-    if (d.status === 'success') {
+    const d=await r.json();
+    if(d.status==='success'){
       document.getElementById('sentBadge').classList.add('show');
       toast('✅ Bill + PDF sent to WhatsApp!');
     }
-  } catch {
+  }catch{
     document.getElementById('sentBadge').classList.add('show');
     toast('✅ Receipt sent!');
   }
 }
 
-// ════════════════════════════════
-// DONE BUTTON → THANK YOU
-// ════════════════════════════════
-async function doneBill() {
-  document.getElementById('tyTotal').textContent = '₹' + paidTotal + ' paid';
-  try { await fetch(`${RENDER_URL}/reset`); } catch {}
-  if (pollTimer) clearInterval(pollTimer);
-  if (weightTimer) clearInterval(weightTimer);
-  if (demoTimer) clearInterval(demoTimer);
-  cart = []; totalDetected = 0; demoIdx = 0;
-  lastServerCount = 0; piConnected = false;
-  onPaymentPage = false; paidTotal = 0;
-  paymentId = ''; orderId = '';
-  renderCart();
-  goTo('thankyou');
-  const bar = document.getElementById('tyBar');
-  bar.style.animation = 'none'; bar.offsetHeight;
-  bar.style.animation = 'countdown 5s linear forwards';
-  setTimeout(() => startNewSession(), 5000);
+async function doneBill(){
+  document.getElementById('tyTotal').textContent='₹'+paidTotal+' paid';
+  try{await fetch(`${RENDER_URL}/reset`);}catch{}
+  if(pollTimer)clearInterval(pollTimer);
+  if(weightTimer)clearInterval(weightTimer);
+  if(demoTimer)clearInterval(demoTimer);
+  cart=[];totalDetected=0;demoIdx=0;
+  lastServerCount=0;piConnected=false;
+  onPaymentPage=false;paidTotal=0;
+  paymentId='';orderId='';
+  renderCart();goTo('thankyou');
+  const bar=document.getElementById('tyBar');
+  bar.style.animation='none';bar.offsetHeight;
+  bar.style.animation='countdown 5s linear forwards';
+  setTimeout(()=>startNewSession(),5000);
 }
 
-function startNewSession() {
-  document.getElementById('loginPhone').value = '';
-  document.getElementById('waPhone').value = '';
+function startNewSession(){
+  document.getElementById('loginPhone').value='';
+  document.getElementById('waPhone').value='';
   document.getElementById('nutritionPanel').classList.remove('visible');
-  document.getElementById('nutritionEmpty').style.display = '';
+  document.getElementById('nutritionEmpty').style.display='';
   document.getElementById('fraudBanner').classList.remove('active');
   document.getElementById('sentBadge').classList.remove('show');
-  document.getElementById('loginBtn').disabled = true;
-  cart = []; currentPhone = ''; piConnected = false;
-  demoIdx = 0; lastServerCount = 0;
-  onPaymentPage = false; paidTotal = 0;
-  paymentId = ''; orderId = '';
-  generateTrolleyQR();
-  goTo('startup');
+  document.getElementById('loginBtn').disabled=true;
+  document.getElementById('phoneHint').textContent='Enter your number then click OK to continue';
+  document.getElementById('phoneHint').style.color='var(--t3)';
+  cart=[];currentPhone='';piConnected=false;
+  demoIdx=0;lastServerCount=0;
+  onPaymentPage=false;paidTotal=0;
+  paymentId='';orderId='';
+  generateTrolleyQR();goTo('startup');
 }
 
-// ════════════════════════════════
-// SIMULATIONS
-// ════════════════════════════════
-function simFPS() {
-  setInterval(() => {
-    document.getElementById('fpsStat').textContent = (9 + Math.random() * 4).toFixed(1);
-  }, 1200);
+function simFPS(){
+  setInterval(()=>{document.getElementById('fpsStat').textContent=(9+Math.random()*4).toFixed(1);},1200);
 }
 
-let simW = 0;
-function startWeightSim() {
-  weightTimer = setInterval(() => {
-    simW += (Math.random() - 0.35) * 12;
-    simW = Math.max(0, Math.min(simW, 3000));
-    if (!piConnected) updateWeight(Math.round(simW));
-  }, 3000);
+let simW=0;
+function startWeightSim(){
+  weightTimer=setInterval(()=>{
+    simW+=(Math.random()-0.35)*12;
+    simW=Math.max(0,Math.min(simW,3000));
+    if(!piConnected)updateWeight(Math.round(simW));
+  },3000);
 }
 
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3500);
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3500);
 }
 
-// ════════════════════════════════
-// INIT
-// ════════════════════════════════
 generateTrolleyQR();
-document.getElementById('loginPhone').addEventListener('keypress', e => {
-  if (e.key === 'Enter') doLogin();
+document.getElementById('loginPhone').addEventListener('keypress',e=>{
+  if(e.key==='Enter')doLogin();
 });
 </script>
 </body>
