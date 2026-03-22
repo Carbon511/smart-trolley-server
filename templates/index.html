@@ -73,9 +73,9 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .inp{flex:1;background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--rs);padding:12px 15px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--t);outline:none;transition:all 0.2s;}
 .inp:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(26,107,74,0.1);background:#fff;}
 .inp::placeholder{color:var(--t3);}
-.inp-hint{font-size:12px;color:var(--t3);align-self:flex-start;}
+.inp-hint{font-size:12px;color:var(--t3);align-self:flex-start;transition:all 0.2s;}
 .lbtn{width:100%;background:var(--green);color:#fff;border:none;padding:15px;border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;}
-.lbtn:hover{background:var(--gd);}
+.lbtn:hover:not(:disabled){background:var(--gd);}
 .lbtn:disabled{background:var(--border);color:var(--t3);cursor:not-allowed;}
 
 /* DASHBOARD */
@@ -100,8 +100,8 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .camp span:first-child{font-size:36px;opacity:0.3;}
 .camp span:last-child{font-size:11px;font-family:monospace;background:rgba(255,255,255,0.07);padding:5px 10px;border-radius:6px;color:#888;}
 .det-popup{position:absolute;top:12px;right:12px;max-width:190px;border-radius:12px;padding:10px 14px;display:none;z-index:20;flex-direction:column;gap:2px;}
-.det-popup.add{background:rgba(26,107,74,0.93);color:#fff;border:2px solid #2dcc7a;box-shadow:0 4px 20px rgba(26,107,74,0.4);animation:popGreen 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;}
-.det-popup.remove{background:rgba(192,57,43,0.93);color:#fff;border:2px solid #e74c3c;box-shadow:0 4px 20px rgba(192,57,43,0.4);top:auto;bottom:12px;animation:popRed 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;}
+.det-popup.add{background:rgba(26,107,74,0.93);color:#fff;border:2px solid #2dcc7a;box-shadow:0 4px 20px rgba(26,107,74,0.4);}
+.det-popup.remove{background:rgba(192,57,43,0.93);color:#fff;border:2px solid #e74c3c;box-shadow:0 4px 20px rgba(192,57,43,0.4);top:auto;bottom:12px;}
 .dp-icon{font-size:20px;margin-bottom:2px;}
 .dp-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:0.8;}
 .dp-name{font-size:13px;font-weight:600;}
@@ -162,7 +162,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .pbtn:hover{background:var(--gd);transform:translateY(-1px);}
 .pbtn:disabled{background:var(--border);color:var(--t3);box-shadow:none;transform:none;cursor:not-allowed;}
 
-/* PROCESSING OVERLAY */
+/* PROCESSING */
 #processingOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9000;display:none;flex-direction:column;align-items:center;justify-content:center;}
 #processingOverlay.active{display:flex;}
 .proc-card{background:#fff;border-radius:20px;padding:36px 48px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;}
@@ -188,15 +188,16 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .bp-tl{font-size:14px;color:var(--t2);}
 .bp-tn{font-family:'Playfair Display',serif;font-size:32px;font-weight:900;color:var(--green);}
 .bp-txn{font-size:11px;color:var(--t3);margin-top:4px;font-family:monospace;}
-.wa-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--sh);margin-bottom:12px;}
-.wa-title{font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px;}
-.wa-row{display:flex;gap:8px;}
-.wai{flex:1;background:var(--bg2);border:1.5px solid var(--border);border-radius:9px;padding:12px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--t);outline:none;transition:all 0.2s;}
-.wai:focus{border-color:#25D366;background:#fff;}
-.wab{background:#25D366;color:#fff;border:none;padding:12px 16px;border-radius:9px;cursor:pointer;display:flex;align-items:center;transition:all 0.2s;flex-shrink:0;}
-.wab:hover{background:#1da851;}
-.sent-badge{display:none;margin-top:10px;background:var(--gl);border:1px solid rgba(26,107,74,0.3);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--green);font-weight:500;align-items:center;gap:6px;}
-.sent-badge.show{display:flex;}
+
+/* WhatsApp status on bill page */
+.wa-status{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 20px;box-shadow:var(--sh);margin-bottom:12px;display:flex;align-items:center;gap:12px;}
+.wa-status-icon{font-size:28px;}
+.wa-status-text{flex:1;}
+.wa-status-title{font-size:13px;font-weight:600;color:var(--t2);}
+.wa-status-sub{font-size:12px;color:var(--t3);margin-top:2px;}
+.wa-resend{background:#25D366;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;flex-shrink:0;}
+.wa-resend:hover{background:#1da851;}
+
 .done-btn{width:100%;background:var(--green);color:#fff;border:none;padding:16px;border-radius:11px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.25s;box-shadow:0 4px 18px rgba(26,107,74,0.2);}
 .done-btn:hover{background:var(--gd);}
 
@@ -235,7 +236,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 
 <!-- LOGIN -->
 <div id="login" class="screen">
-  <div class="lh"><h2>Link Your Trolley</h2><p>Enter your WhatsApp number to receive your bill</p></div>
+  <div class="lh"><h2>Link Your Trolley</h2><p>Enter your WhatsApp number to receive your bill automatically</p></div>
   <div class="lcard">
     <div class="tidbadge">🛒 Trolley #<span id="trolleyId">T-0000</span></div>
     <div class="qrf">
@@ -248,15 +249,9 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
     <div class="div">enter your WhatsApp number</div>
     <div class="prow">
       <div class="ppre">🇮🇳 +91</div>
-      <input class="inp" id="loginPhone" type="tel" placeholder="10-digit number" maxlength="10" oninput="onPhoneInput(this.value)">
+      <input class="inp" id="loginPhone" type="tel" placeholder="10-digit WhatsApp number" maxlength="10" oninput="onPhoneInput(this.value)">
     </div>
-    <p class="inp-hint" id="phoneHint">Enter your number then click OK to continue</p>
-   <a href="https://wa.me/15559387267?text=Hi%20SmartTrolley%20I%20want%20my%20bill" 
-       target="_blank"
-       style="width:100%;background:#25D366;color:#fff;border:none;padding:13px;border-radius:10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(37,211,102,0.3);">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      📱 Step 1 — Tap to enable WhatsApp bill
-    </a>
+    <p class="inp-hint" id="phoneHint">Enter your 10-digit number then click OK</p>
     <button class="lbtn" id="loginBtn" onclick="doLogin()" disabled>OK — Start Shopping →</button>
   </div>
 </div>
@@ -317,7 +312,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
       <div class="ctop"><span class="chead">Cart</span><span class="cbadge" id="cartBadge">0</span></div>
       <div class="fraud-top" id="fraudBanner">
         <span class="ft-icon">🚨</span>
-        <span class="ft-text" id="fraudText">Cart changed! Total recalculated. Please pay again.</span>
+        <span class="ft-text" id="fraudText">Cart changed during payment! Total recalculated.</span>
       </div>
       <div class="clist" id="cartList">
         <div class="empty"><span class="ei">🛒</span><span>Cart is empty</span><span style="font-size:12px">Point camera at products</span></div>
@@ -330,7 +325,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
   </div>
 </div>
 
-<!-- PROCESSING OVERLAY -->
+<!-- PROCESSING -->
 <div id="processingOverlay">
   <div class="proc-card">
     <div class="proc-spinner"></div>
@@ -355,16 +350,17 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
         <span class="bp-tn" id="bpTotal">₹0</span>
       </div>
     </div>
-    <div class="wa-card">
-      <div class="wa-title">📤 Send receipt to WhatsApp</div>
-      <div class="wa-row">
-        <input class="wai" id="waPhone" type="tel" placeholder="WhatsApp number">
-        <button class="wab" onclick="sendBill()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        </button>
+
+    <!-- WhatsApp status — fully automatic -->
+    <div class="wa-status">
+      <span class="wa-status-icon" id="waStatusIcon">📤</span>
+      <div class="wa-status-text">
+        <div class="wa-status-title" id="waStatusTitle">Sending bill to WhatsApp...</div>
+        <div class="wa-status-sub" id="waStatusSub">+91 <span id="waStatusPhone">—</span></div>
       </div>
-      <div class="sent-badge" id="sentBadge">✅ Bill + PDF receipt sent to WhatsApp!</div>
+      <button class="wa-resend" id="waResendBtn" onclick="resendBill()" style="display:none">Resend</button>
     </div>
+
     <button class="done-btn" onclick="doneBill()">✓ &nbsp; Done — Verified Receipt</button>
   </div>
 </div>
@@ -373,7 +369,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 <div id="thankyou" class="screen">
   <div class="ty-circle">✓</div>
   <h2 class="ty-h">Thank You!</h2>
-  <p class="ty-p">Payment complete · Receipt sent · See you again!</p>
+  <p class="ty-p">Payment complete · Bill sent to WhatsApp · See you again!</p>
   <p class="ty-total" id="tyTotal"></p>
   <div class="ty-bar-wrap"><div class="ty-bar" id="tyBar"></div></div>
   <p class="ty-note">Starting new session in 5 seconds...</p>
@@ -420,10 +416,9 @@ function goTo(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-
-function showProcessing(title,sub){
-  document.getElementById('procTitle').textContent=title;
-  document.getElementById('procSub').textContent=sub;
+function showProcessing(t,s){
+  document.getElementById('procTitle').textContent=t;
+  document.getElementById('procSub').textContent=s;
   document.getElementById('processingOverlay').classList.add('active');
 }
 function hideProcessing(){
@@ -435,7 +430,6 @@ function makeQR(boxId,text,size){
   el.innerHTML='';
   new QRCode(el,{text,width:size,height:size,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
 }
-
 function generateTrolleyQR(){
   const id=Math.floor(1000+Math.random()*9000);
   trolleyNum="T-"+id;
@@ -443,21 +437,21 @@ function generateTrolleyQR(){
   makeQR('loginQRBox',`${RENDER_URL}/?trolley=${trolleyNum}`,160);
 }
 
-// ── LOGIN — only proceeds when OK button clicked ──
+// ── LOGIN — button click only, no auto proceed ──
 function onPhoneInput(val){
   const btn=document.getElementById('loginBtn');
   const hint=document.getElementById('phoneHint');
   if(val.length===10){
     btn.disabled=false;
-    hint.textContent='✅ Number ready — click OK to continue';
+    hint.textContent='✅ Number ready — click OK to start shopping';
     hint.style.color='var(--green)';
   } else if(val.length>0){
     btn.disabled=true;
-    hint.textContent=`${10-val.length} more digits needed`;
+    hint.textContent=`${10-val.length} more digit${10-val.length>1?'s':''} needed`;
     hint.style.color='var(--t3)';
   } else {
     btn.disabled=true;
-    hint.textContent='Enter your number then click OK to continue';
+    hint.textContent='Enter your 10-digit number then click OK';
     hint.style.color='var(--t3)';
   }
 }
@@ -472,9 +466,10 @@ function doLogin(){
   document.getElementById('fraudBanner').classList.remove('active');
   goTo('dashboard');
   simFPS();startWeightSim();startPolling();startDemo();
-  toast("✅ Welcome! Session started for +91 "+currentPhone);
+  toast("✅ Welcome! Bill will be sent to +91"+currentPhone+" after payment");
 }
 
+// ── POLLING ──
 function startPolling(){
   if(pollTimer)clearInterval(pollTimer);
   pollTimer=setInterval(async()=>{
@@ -508,14 +503,16 @@ function startPolling(){
   },2000);
 }
 
+// ── FRAUD ──
 function cartChangedDuringPayment(reason){
   onPaymentPage=false;hideProcessing();
   goTo('dashboard');
   document.getElementById('fraudBanner').classList.add('active');
-  document.getElementById('fraudText').textContent=`🚨 ${reason}! Total recalculated — review and pay again.`;
-  toast("🚨 Cart changed! Please pay again.");
+  document.getElementById('fraudText').textContent=`🚨 ${reason}! Total recalculated — please pay again.`;
+  toast("🚨 Cart changed! Please review and pay again.");
 }
 
+// ── DEMO ──
 function startDemo(){
   if(demoTimer)clearInterval(demoTimer);
   setTimeout(()=>{if(!piConnected&&!onPaymentPage)addDemo();},10000);
@@ -527,6 +524,7 @@ function addDemo(){
   cart.push(item);showAddPopup(item);renderCart();
 }
 
+// ── POPUPS ──
 function showAddPopup(item){
   totalDetected++;
   document.getElementById('detCount').textContent=totalDetected;
@@ -536,7 +534,8 @@ function showAddPopup(item){
   document.getElementById('addName').textContent=item.name;
   document.getElementById('addPrice').textContent='₹'+item.price;
   const pop=document.getElementById('addPopup');
-  pop.style.display='flex';pop.style.animation='none';pop.offsetHeight;
+  pop.style.display='flex';
+  pop.style.animation='none';pop.offsetHeight;
   pop.style.animation='popGreen 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
   if(addPopTimer)clearTimeout(addPopTimer);
   addPopTimer=setTimeout(()=>{pop.style.display='none';document.getElementById('detStatus').textContent='Scanning';},3500);
@@ -549,13 +548,15 @@ function showRemovePopup(item){
   document.getElementById('removeName').textContent=item.name;
   document.getElementById('removePrice').textContent='₹'+item.price;
   const pop=document.getElementById('removePopup');
-  pop.style.display='flex';pop.style.animation='none';pop.offsetHeight;
+  pop.style.display='flex';
+  pop.style.animation='none';pop.offsetHeight;
   pop.style.animation='popRed 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
   if(removePopTimer)clearTimeout(removePopTimer);
   removePopTimer=setTimeout(()=>{pop.style.display='none';},3500);
   toast(`🗑️ ${item.name} removed`);
 }
 
+// ── NUTRITION ──
 function showNut(name){
   const n=NUT[name];if(!n)return;
   document.getElementById('nutritionEmpty').style.display='none';
@@ -577,6 +578,7 @@ function showNut(name){
     </div>`;
 }
 
+// ── CART ──
 function renderCart(){
   const l=document.getElementById('cartList');
   const total=cart.reduce((s,i)=>s+i.price,0);
@@ -603,6 +605,7 @@ async function removeItem(idx){
   try{await fetch(`${RENDER_URL}/remove/${idx}`);}catch{}
 }
 
+// ── WEIGHT ──
 function updateWeight(g){
   document.getElementById('weightNum').innerHTML=`${g}<span class="wu">g</span>`;
   document.getElementById('wbarFill').style.width=Math.min((g/5000)*100,100)+'%';
@@ -616,7 +619,7 @@ function updateWeight(g){
   lastWeight=g;
 }
 
-// ── RAZORPAY PAYMENT ──
+// ── RAZORPAY ──
 async function startPayment(){
   if(cart.length===0){toast('⚠️ Cart is empty');return;}
   onPaymentPage=true;
@@ -633,21 +636,20 @@ async function startPayment(){
     const d=await r.json();
     hideProcessing();
     if(d.status!=='success'){
-      toast('⚠️ Could not create order: '+d.message);
+      toast('⚠️ Could not create order: '+(d.message||'Try again'));
       onPaymentPage=false;return;
     }
     const options={
-      key: RZP_KEY_ID,
-      amount: total*100,
+      key:RZP_KEY_ID,
+      amount:total*100,
       currency:'INR',
       name:'SmartTrolley',
       description:`Trolley ${trolleyNum} — ${cart.length} items`,
-      order_id: d.order_id,
+      order_id:d.order_id,
       prefill:{contact:'+91'+currentPhone},
       notes:{trolley:trolleyNum},
       theme:{color:'#1a6b4a'},
-      handler: function(response){
-        // Payment confirmed — open bill page immediately, NO waiting
+      handler:function(response){
         paymentId=response.razorpay_payment_id||'';
         orderId=response.razorpay_order_id||d.order_id;
         onPaymentPage=false;
@@ -657,9 +659,8 @@ async function startPayment(){
         ondismiss:function(){
           onPaymentPage=false;
           hideProcessing();
-          toast('⚠️ Payment cancelled. Try again.');
-        },
-        escape:true
+          toast('⚠️ Payment cancelled. Try again when ready.');
+        }
       }
     };
     const rzp=new Razorpay(options);
@@ -667,9 +668,11 @@ async function startPayment(){
   }catch(e){
     hideProcessing();onPaymentPage=false;
     toast('⚠️ Payment error. Try again.');
+    console.error(e);
   }
 }
 
+// ── BILL PAGE — fully automatic ──
 function openBillPage(){
   const now=new Date();
   document.getElementById('bpDate').textContent=now.toLocaleString('en-IN',{
@@ -683,38 +686,63 @@ function openBillPage(){
       <span class="bp-pr">₹${i.price}</span>
     </div>`).join('');
   document.getElementById('bpTotal').textContent='₹'+paidTotal;
-  document.getElementById('sentBadge').classList.remove('show');
-  document.getElementById('waPhone').value=currentPhone;
+
+  // Set WhatsApp status
+  document.getElementById('waStatusPhone').textContent=currentPhone;
+  document.getElementById('waStatusIcon').textContent='📤';
+  document.getElementById('waStatusTitle').textContent='Sending bill to WhatsApp...';
+  document.getElementById('waResendBtn').style.display='none';
+
   goTo('billpage');
-  toast("✅ Payment successful! Receipt ready.");
-  sendBill();
+  toast("✅ Payment successful! Sending your bill...");
+
+  // Auto send immediately — no button needed
+  sendBillAuto();
 }
 
-async function sendBill(){
-  const phone=document.getElementById('waPhone').value.trim();
-  if(!phone){toast('⚠️ Enter WhatsApp number');return;}
+// ── AUTO SEND BILL ──
+async function sendBillAuto(){
   try{
     const r=await fetch(`${RENDER_URL}/checkout`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        phone,
+        phone:currentPhone,
         items:cart,
         total:paidTotal,
-        payment_id:paymentId
+        payment_id:paymentId,
+        trolley:trolleyNum
       })
     });
     const d=await r.json();
     if(d.status==='success'){
-      document.getElementById('sentBadge').classList.add('show');
-      toast('✅ Bill + PDF sent to WhatsApp!');
+      document.getElementById('waStatusIcon').textContent='✅';
+      document.getElementById('waStatusTitle').textContent='Bill sent to WhatsApp!';
+      document.getElementById('waResendBtn').style.display='none';
+      toast('✅ Bill sent to +91'+currentPhone+'!');
+    } else {
+      setBillFailed();
     }
   }catch{
-    document.getElementById('sentBadge').classList.add('show');
-    toast('✅ Receipt sent!');
+    setBillFailed();
   }
 }
 
+function setBillFailed(){
+  document.getElementById('waStatusIcon').textContent='⚠️';
+  document.getElementById('waStatusTitle').textContent='Could not send bill';
+  document.getElementById('waResendBtn').style.display='block';
+  toast('⚠️ Bill sending failed — tap Resend');
+}
+
+async function resendBill(){
+  document.getElementById('waStatusIcon').textContent='📤';
+  document.getElementById('waStatusTitle').textContent='Resending bill...';
+  document.getElementById('waResendBtn').style.display='none';
+  await sendBillAuto();
+}
+
+// ── DONE ──
 async function doneBill(){
   document.getElementById('tyTotal').textContent='₹'+paidTotal+' paid';
   try{await fetch(`${RENDER_URL}/reset`);}catch{}
@@ -725,7 +753,8 @@ async function doneBill(){
   lastServerCount=0;piConnected=false;
   onPaymentPage=false;paidTotal=0;
   paymentId='';orderId='';
-  renderCart();goTo('thankyou');
+  renderCart();
+  goTo('thankyou');
   const bar=document.getElementById('tyBar');
   bar.style.animation='none';bar.offsetHeight;
   bar.style.animation='countdown 5s linear forwards';
@@ -734,25 +763,24 @@ async function doneBill(){
 
 function startNewSession(){
   document.getElementById('loginPhone').value='';
-  document.getElementById('waPhone').value='';
   document.getElementById('nutritionPanel').classList.remove('visible');
   document.getElementById('nutritionEmpty').style.display='';
   document.getElementById('fraudBanner').classList.remove('active');
-  document.getElementById('sentBadge').classList.remove('show');
   document.getElementById('loginBtn').disabled=true;
-  document.getElementById('phoneHint').textContent='Enter your number then click OK to continue';
+  document.getElementById('phoneHint').textContent='Enter your 10-digit number then click OK';
   document.getElementById('phoneHint').style.color='var(--t3)';
   cart=[];currentPhone='';piConnected=false;
   demoIdx=0;lastServerCount=0;
   onPaymentPage=false;paidTotal=0;
   paymentId='';orderId='';
-  generateTrolleyQR();goTo('startup');
+  generateTrolleyQR();
+  goTo('startup');
 }
 
+// ── SIMULATIONS ──
 function simFPS(){
   setInterval(()=>{document.getElementById('fpsStat').textContent=(9+Math.random()*4).toFixed(1);},1200);
 }
-
 let simW=0;
 function startWeightSim(){
   weightTimer=setInterval(()=>{
@@ -761,13 +789,13 @@ function startWeightSim(){
     if(!piConnected)updateWeight(Math.round(simW));
   },3000);
 }
-
 function toast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),3500);
 }
 
+// ── INIT ──
 generateTrolleyQR();
 document.getElementById('loginPhone').addEventListener('keypress',e=>{
   if(e.key==='Enter')doLogin();
