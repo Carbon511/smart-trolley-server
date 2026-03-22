@@ -220,34 +220,59 @@ def checkout():
 # MESSAGING
 # ════════════════════════════
 
-def send_via_wati(phone, bill):
+def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=""):
     try:
         base = WATI_API_URL.rstrip('/')
         headers = {
             'Authorization': f'Bearer {WATI_API_TOKEN}',
-            'Content-Type': 'application/json-patch+json'
+            'Content-Type': 'application/json'
         }
 
-        # Try session message
-        url = f"{base}/api/v1/sendSessionMessage/91{phone}"
-        r = req.post(url, json={'messageText': bill}, headers=headers, timeout=10)
-        print(f"Wati session: {r.status_code} {r.text[:100]}")
+        # Format items list
+        items_text = ""
+        if cart_items:
+            items_text = "\n".join([f"• {i['name']} - ₹{i['price']}" for i in cart_items])
+        else:
+            items_text = "Items in cart"
+
+        # Date
+        from datetime import datetime
+        date_str = datetime.now().strftime("%d %b %Y, %I:%M %p")
+
+        # Send template message
+        url = f"{base}/api/v1/sendTemplateMessage"
+        payload = {
+            "template_name": "smart_trolley_bill",
+            "broadcast_name": "SmartTrolley_Bill",
+            "receivers": [
+                {
+                    "whatsappNumber": f"91{phone}",
+                    "customParams": [
+                        {"name": "1", "value": trolley or "T-0000"},
+                        {"name": "2", "value": phone},
+                        {"name": "3", "value": date_str},
+                        {"name": "4", "value": items_text},
+                        {"name": "5", "value": str(total)},
+                        {"name": "6", "value": payment_id or "N/A"}
+                    ]
+                }
+            ]
+        }
+
+        r = req.post(url, json=payload, headers=headers, timeout=10)
+        print(f"Wati template: {r.status_code} {r.text[:200]}")
         if r.status_code == 200:
             return True
 
-        # Try text message
-        url2 = f"{base}/api/v1/sendTextMessage/91{phone}"
-        r2 = req.post(url2, json={'message': bill}, headers=headers, timeout=10)
-        print(f"Wati text: {r2.status_code} {r2.text[:100]}")
-        if r2.status_code == 200:
-            return True
-
-        return False
+        # Fallback to session message
+        url2 = f"{base}/api/v1/sendSessionMessage/91{phone}"
+        r2 = req.post(url2, json={'messageText': bill}, headers=headers, timeout=10)
+        print(f"Wati session fallback: {r2.status_code}")
+        return r2.status_code == 200
 
     except Exception as e:
         print(f"Wati error: {e}")
         return False
-
 
 def send_via_twilio(phone, bill):
     try:
