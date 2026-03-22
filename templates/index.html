@@ -1316,14 +1316,14 @@ function doLogin() {
   setTimeout(()=>{
     const item = DEMO_ITEMS[demoIdx % DEMO_ITEMS.length];
     cart.push(item); onItemDetected(item); demoIdx++; renderCart();
-  }, 3000);
+  }, 8000);
 
   setInterval(()=>{
     if (document.getElementById('dashboard').classList.contains('active')) {
       const item = DEMO_ITEMS[demoIdx % DEMO_ITEMS.length];
       cart.push(item); onItemDetected(item); demoIdx++; renderCart();
     }
-  }, 6000);
+  }, 15000);
 }
 
 // ─── POLLING ───
@@ -1501,7 +1501,7 @@ function updateWeight(g) {
       chip.textContent = 'Stable';
       txt.textContent = 'Weight stable';
       txt.style.color = 'var(--text3)';
-    }, 3000);
+    }, 8000);
   }
   lastWeight = g;
 }
