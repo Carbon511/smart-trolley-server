@@ -5,6 +5,7 @@ import os
 import requests as req
 import hashlib
 import hmac
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -21,7 +22,7 @@ RZP_KEY_ID     = os.environ.get('RAZORPAY_KEY_ID', '')
 RZP_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '')
 UPI_ID         = "sherinsajan784-2@oksbi"
 
-# ── Razorpay lazy load — prevents crash on startup ──
+# ── Razorpay lazy load ──
 _rzp_client = None
 
 def get_rzp():
@@ -67,11 +68,7 @@ def ping():
 @app.route('/cart')
 def get_cart():
     total = sum(item['price'] for item in cart)
-    return jsonify({
-        'items': cart,
-        'total': total,
-        'weight': current_weight
-    })
+    return jsonify({'items': cart, 'total': total, 'weight': current_weight})
 
 @app.route('/add_item', methods=['POST'])
 def add_item():
@@ -118,17 +115,12 @@ def payment_qr():
 def create_order():
     try:
         data = request.json or {}
-
-        # Use frontend amount if server cart is empty (demo mode)
         frontend_amount = int(float(data.get('amount', 0)))
-        server_total    = sum(item['price'] for item in cart)
-        total           = server_total if server_total > 0 else frontend_amount
-
+        server_total = sum(item['price'] for item in cart)
+        total = server_total if server_total > 0 else frontend_amount
         print(f"create_order: server={server_total} frontend={frontend_amount} using={total}")
-
         if total <= 0:
             return jsonify({'status': 'error', 'message': 'Amount is zero'}), 400
-
         client = get_rzp()
         if client:
             order = client.order.create({
@@ -144,7 +136,6 @@ def create_order():
                 'key_id': RZP_KEY_ID
             })
         else:
-            # Demo mode
             print("Demo mode order")
             return jsonify({
                 'status': 'success',
@@ -152,7 +143,6 @@ def create_order():
                 'amount': total,
                 'key_id': 'demo'
             })
-
     except Exception as e:
         print(f"create_order ERROR: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -163,10 +153,8 @@ def create_order():
 
 @app.route('/verify_payment', methods=['POST'])
 def verify_payment():
-    # Simplified — just return success
-    # Razorpay already verified on their end
     data = request.json or {}
-    print(f"verify_payment: {data.get('razorpay_payment_id','')}")
+    print(f"verify_payment: {data.get('razorpay_payment_id', '')}")
     return jsonify({'status': 'success', 'verified': True})
 
 # ════════════════════════════
@@ -176,10 +164,12 @@ def verify_payment():
 @app.route('/checkout', methods=['POST'])
 def checkout():
     try:
-        data  = request.json or {}
+        data = request.json or {}
         phone = data.get('phone', '').strip()
         items = data.get('items', None)
         total = data.get('total', None)
+        payment_id = data.get('payment_id', '')
+        trolley = data.get('trolley', 'T-0000')
 
         if not phone:
             return jsonify({'status': 'error', 'message': 'No phone'}), 400
@@ -193,20 +183,19 @@ def checkout():
         if len(phone) != 10:
             return jsonify({'status': 'error', 'message': 'Invalid number'}), 400
 
-        # Use frontend items if server cart empty (demo mode)
         bill_items = items if items else cart
         bill_total = int(float(total)) if total else sum(i['price'] for i in bill_items)
-        bill       = generate_bill(bill_items, bill_total)
+        bill = generate_bill(bill_items, bill_total)
 
-        print(f"Sending bill to +91{phone} total=₹{bill_total} items={len(bill_items)}")
+        print(f"Sending bill to +91{phone} total=Rs.{bill_total} items={len(bill_items)}")
 
-        # Try Wati first
-       if WATI_API_URL and WATI_API_TOKEN:
+        # Try Wati template first
+        if WATI_API_URL and WATI_API_TOKEN:
             if send_via_wati(phone, bill,
-                           cart_items=bill_items,
-                           total=bill_total,
-                           trolley=data.get('trolley', 'T-0000'),
-                           payment_id=data.get('payment_id', '')):
+                             cart_items=bill_items,
+                             total=bill_total,
+                             trolley=trolley,
+                             payment_id=payment_id):
                 return jsonify({'status': 'success', 'method': 'wati'})
 
         # Fallback Twilio
@@ -214,7 +203,7 @@ def checkout():
             if send_via_twilio(phone, bill):
                 return jsonify({'status': 'success', 'method': 'twilio'})
 
-        return jsonify({'status': 'error', 'message': 'Both Wati and Twilio failed'}), 500
+        return jsonify({'status': 'error', 'message': 'Both failed'}), 500
 
     except Exception as e:
         print(f"checkout ERROR: {e}")
@@ -232,16 +221,14 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
             'Content-Type': 'application/json'
         }
 
-        from datetime import datetime
         date_str = datetime.now().strftime("%d %b %Y, %I:%M %p")
 
-        # Format items
         if cart_items:
-            items_text = "\n".join([f"• {i['name']} - Rs.{i['price']}" for i in cart_items])
+            items_text = "\n".join([f"* {i['name']} - Rs.{i['price']}" for i in cart_items])
         else:
             items_text = "Items purchased"
 
-        # Method 1 — approved template (works for ANY number no session needed)
+        # Method 1 — approved template
         url = f"{base}/api/v1/sendTemplateMessage"
         payload = {
             "template_name": "smart_trolley_bill_receipt",
@@ -266,9 +253,13 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
             return True
 
         # Method 2 — session message fallback
+        headers2 = {
+            'Authorization': f'Bearer {WATI_API_TOKEN}',
+            'Content-Type': 'application/json-patch+json'
+        }
         url2 = f"{base}/api/v1/sendSessionMessage/91{phone}"
-        r2 = req.post(url2, json={'messageText': bill}, headers=headers, timeout=10)
-        print(f"Wati session: {r2.status_code}")
+        r2 = req.post(url2, json={'messageText': bill}, headers=headers2, timeout=10)
+        print(f"Wati session: {r2.status_code} {r2.text[:100]}")
         if r2.status_code == 200:
             return True
 
@@ -277,6 +268,8 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
     except Exception as e:
         print(f"Wati error: {e}")
         return False
+
+
 def send_via_twilio(phone, bill):
     try:
         from twilio.rest import Client
