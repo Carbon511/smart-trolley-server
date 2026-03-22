@@ -906,9 +906,9 @@ setTimeout(()=>{
         const item = DEMO_ITEMS[demoIdx % DEMO_ITEMS.length];
         cart.push(item); onItemDetected(item); demoIdx++; renderCart();
       }
-    },7000);
+    },5000);
   });
-},4000);
+}, 100);
 
 function toast(msg) {
   const t = document.getElementById('toast');
