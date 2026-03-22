@@ -73,4 +73,4 @@ def ping():
 
 if __name__ == "__main__":
     print("Starting Smart Trolley Server...")
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=10000, debug=False)
