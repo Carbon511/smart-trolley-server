@@ -651,8 +651,9 @@ async function startPayment(){
         ondismiss:function(){
           onPaymentPage=false;
           hideProcessing();
-          toast('⚠️ Payment cancelled.');
-        }
+          toast('⚠️ Payment cancelled. Try again.');
+        },
+        escape:true
       }
     };
     const rzp=new Razorpay(options);
