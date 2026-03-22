@@ -1,8 +1,14 @@
 def generate_bill(cart, total):
-    lines = ["🛒 *Smart Trolley Bill*", "─────────────────────"]
+    lines = []
+    lines.append("Smart Trolley Bill")
+    lines.append("---------------------")
     for item in cart:
-        lines.append(f"{item['name']} - ₹{item['price']}")
-    lines.append("─────────────────────")
-    lines.append(f"*Total: ₹{total}*")
-    lines.append("\nThank you for shopping!")
+        name = item.get('name', 'Item')
+        price = item.get('price', 0)
+        lines.append(f"{name} - Rs.{price}")
+    lines.append("---------------------")
+    lines.append(f"Total: Rs.{total}")
+    lines.append("")
+    lines.append("Thank you for shopping!")
+    lines.append("SmartTrolley - Powered by AI")
     return "\n".join(lines)
