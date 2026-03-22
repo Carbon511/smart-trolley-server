@@ -201,8 +201,12 @@ def checkout():
         print(f"Sending bill to +91{phone} total=₹{bill_total} items={len(bill_items)}")
 
         # Try Wati first
-        if WATI_API_URL and WATI_API_TOKEN:
-            if send_via_wati(phone, bill):
+       if WATI_API_URL and WATI_API_TOKEN:
+            if send_via_wati(phone, bill,
+                           cart_items=bill_items,
+                           total=bill_total,
+                           trolley=data.get('trolley', 'T-0000'),
+                           payment_id=data.get('payment_id', '')):
                 return jsonify({'status': 'success', 'method': 'wati'})
 
         # Fallback Twilio
@@ -228,18 +232,16 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
             'Content-Type': 'application/json'
         }
 
-        # Format items list
-        items_text = ""
-        if cart_items:
-            items_text = "\n".join([f"• {i['name']} - ₹{i['price']}" for i in cart_items])
-        else:
-            items_text = "Items in cart"
-
-        # Date
         from datetime import datetime
         date_str = datetime.now().strftime("%d %b %Y, %I:%M %p")
 
-        # Send template message
+        # Format items
+        if cart_items:
+            items_text = "\n".join([f"• {i['name']} - Rs.{i['price']}" for i in cart_items])
+        else:
+            items_text = "Items purchased"
+
+        # Method 1 — approved template (works for ANY number no session needed)
         url = f"{base}/api/v1/sendTemplateMessage"
         payload = {
             "template_name": "smart_trolley_bill",
@@ -258,22 +260,23 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
                 }
             ]
         }
-
         r = req.post(url, json=payload, headers=headers, timeout=10)
         print(f"Wati template: {r.status_code} {r.text[:200]}")
         if r.status_code == 200:
             return True
 
-        # Fallback to session message
+        # Method 2 — session message fallback
         url2 = f"{base}/api/v1/sendSessionMessage/91{phone}"
         r2 = req.post(url2, json={'messageText': bill}, headers=headers, timeout=10)
-        print(f"Wati session fallback: {r2.status_code}")
-        return r2.status_code == 200
+        print(f"Wati session: {r2.status_code}")
+        if r2.status_code == 200:
+            return True
+
+        return False
 
     except Exception as e:
         print(f"Wati error: {e}")
         return False
-
 def send_via_twilio(phone, bill):
     try:
         from twilio.rest import Client
