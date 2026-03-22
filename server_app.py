@@ -244,7 +244,7 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
         # Method 1 — approved template (works for ANY number no session needed)
         url = f"{base}/api/v1/sendTemplateMessage"
         payload = {
-            "template_name": "smart_trolley_bill",
+            "template_name": "smart_trolley_bill_receipt",
             "broadcast_name": "SmartTrolley_Bill",
             "receivers": [
                 {
