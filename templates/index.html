@@ -4,186 +4,224 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SmartTrolley</title>
-<meta name="description" content="Smart Trolley - AI powered shopping cart with automatic product detection and instant UPI payment">
+<meta name="description" content="Smart Trolley - AI powered shopping cart">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-:root {
-  --bg:#f5f4f0;--bg2:#eeece7;--surface:#ffffff;--surface2:#faf9f6;
-  --border:#e4e1d9;--green:#1a6b4a;--green-light:#e8f5ef;
-  --amber:#c87533;--amber-light:#fdf3e8;--red:#c0392b;--red-light:#fdecea;
-  --blue:#2563a8;--blue-light:#eaf1fb;
-  --text:#1c1b18;--text2:#5a5750;--text3:#9a9690;
-  --shadow:0 2px 12px rgba(0,0,0,0.07);--shadow-lg:0 8px 40px rgba(0,0,0,0.1);
-  --radius:16px;--radius-sm:10px;
+:root{
+  --bg:#f5f4f0;--bg2:#eeece7;--surface:#fff;--surface2:#faf9f6;
+  --border:#e4e1d9;--green:#1a6b4a;--gl:#e8f5ef;--gd:#155a3e;
+  --amber:#c87533;--al:#fdf3e8;--red:#c0392b;--rl:#fdecea;
+  --blue:#2563a8;--bl:#eaf1fb;
+  --t:#1c1b18;--t2:#5a5750;--t3:#6b6b6b;
+  --sh:0 2px 12px rgba(0,0,0,0.07);--shl:0 8px 40px rgba(0,0,0,0.1);
+  --r:16px;--rs:10px;
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
 .screen{display:none;min-height:100vh;}.screen.active{display:flex;}
+@keyframes riseIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes beam{0%{top:10%}90%{top:88%}100%{top:88%;opacity:0}}
+@keyframes slideR{from{transform:translateX(12px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes popGreen{0%{transform:scale(0.7) translateY(-10px);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1) translateY(0);opacity:1}}
+@keyframes popRed{0%{transform:scale(0.7) translateY(10px);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1) translateY(0);opacity:1}}
+@keyframes countdown{from{width:100%}to{width:0%}}
+@keyframes bounce{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
 
 /* STARTUP */
 #startup{flex-direction:column;align-items:center;justify-content:center;background:var(--surface);position:relative;overflow:hidden;}
-.startup-bg{position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 20% 20%,rgba(26,107,74,0.06) 0%,transparent 60%),radial-gradient(ellipse 50% 60% at 80% 80%,rgba(200,117,51,0.06) 0%,transparent 60%);}
-.startup-dots{position:absolute;inset:0;background-image:radial-gradient(circle,var(--border) 1px,transparent 1px);background-size:32px 32px;opacity:0.5;}
-.startup-content{position:relative;z-index:2;text-align:center;animation:riseIn 1s cubic-bezier(0.16,1,0.3,1) forwards;}
-@keyframes riseIn{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
-.startup-badge{display:inline-flex;align-items:center;gap:8px;background:var(--green-light);color:var(--green);font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:8px 16px;border-radius:50px;margin-bottom:28px;}
-.startup-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.5s ease-in-out infinite;}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
-.startup-title{font-family:'Playfair Display',serif;font-size:72px;font-weight:900;color:var(--text);letter-spacing:-3px;line-height:1;margin-bottom:16px;}
-.startup-title span{color:var(--green);}
-.startup-sub{font-size:16px;color:var(--text2);margin-bottom:48px;}
-.steps-row{display:flex;gap:8px;justify-content:center;margin-bottom:48px;}
-.step-pill{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:50px;padding:8px 16px;font-size:12px;font-weight:500;color:var(--text2);}
-.step-num{width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;}
-.start-btn{background:var(--green);color:#fff;border:none;padding:20px 56px;border-radius:50px;font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.3s;box-shadow:0 8px 24px rgba(26,107,74,0.25);}
-.start-btn:hover{background:#155a3e;transform:translateY(-2px);}
+.sbg{position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 20% 20%,rgba(26,107,74,0.06),transparent 60%),radial-gradient(ellipse 50% 60% at 80% 80%,rgba(200,117,51,0.06),transparent 60%);}
+.sdots{position:absolute;inset:0;background-image:radial-gradient(circle,var(--border) 1px,transparent 1px);background-size:32px 32px;opacity:0.5;}
+.sc{position:relative;z-index:2;text-align:center;animation:riseIn 0.9s cubic-bezier(0.16,1,0.3,1) forwards;}
+.sbadge{display:inline-flex;align-items:center;gap:8px;background:var(--gl);color:var(--green);font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:7px 16px;border-radius:50px;margin-bottom:24px;}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.5s ease-in-out infinite;}
+.stitle{font-family:'Playfair Display',serif;font-size:64px;font-weight:900;letter-spacing:-3px;line-height:1;margin-bottom:12px;}
+.stitle span{color:var(--green);}
+.ssub{font-size:15px;color:var(--t2);margin-bottom:40px;}
+.srow{display:flex;gap:8px;justify-content:center;margin-bottom:40px;}
+.spill{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:50px;padding:7px 14px;font-size:12px;font-weight:500;color:var(--t2);}
+.snum{width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.sbtn{background:var(--green);color:#fff;border:none;padding:18px 52px;border-radius:50px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.3s;box-shadow:0 8px 24px rgba(26,107,74,0.25);}
+.sbtn:hover{background:var(--gd);transform:translateY(-2px);}
 
 /* LOGIN */
-#login{flex-direction:column;align-items:center;justify-content:center;background:var(--bg);gap:24px;padding:24px;}
-.login-header{text-align:center;animation:riseIn 0.5s ease forwards;}
-.login-header h2{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;margin-bottom:6px;}
-.login-header p{color:var(--text2);font-size:14px;}
-.login-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:40px;width:100%;max-width:400px;box-shadow:var(--shadow-lg);animation:riseIn 0.6s ease 0.1s both;display:flex;flex-direction:column;align-items:center;gap:24px;}
-.trolley-id-badge{background:var(--green-light);border:1px solid rgba(26,107,74,0.2);border-radius:12px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--green);display:flex;align-items:center;gap:8px;}
-.qr-frame{position:relative;width:220px;height:220px;border-radius:20px;overflow:hidden;background:#fff;border:2px solid var(--border);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;}
-.qr-corner{position:absolute;width:20px;height:20px;border-color:var(--green);border-style:solid;z-index:3;}
-.qr-corner.tl{top:8px;left:8px;border-width:3px 0 0 3px;border-radius:4px 0 0 0;}
-.qr-corner.tr{top:8px;right:8px;border-width:3px 3px 0 0;border-radius:0 4px 0 0;}
-.qr-corner.bl{bottom:8px;left:8px;border-width:0 0 3px 3px;border-radius:0 0 0 4px;}
-.qr-corner.br{bottom:8px;right:8px;border-width:0 3px 3px 0;border-radius:0 0 4px 0;}
-.qr-scan-beam{position:absolute;width:90%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);animation:beam 2s ease-in-out infinite;z-index:2;}
-@keyframes beam{0%{top:10%;opacity:1}90%{top:90%;opacity:1}100%{top:90%;opacity:0}}
-.qr-img-wrap{width:180px;height:180px;}.qr-img-wrap img{width:100%;height:100%;}
-.qr-hint{font-size:12px;color:var(--text3);text-align:center;line-height:1.5;}
-.divider{width:100%;display:flex;align-items:center;gap:12px;color:var(--text3);font-size:12px;}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
-.phone-row{display:flex;gap:8px;width:100%;}
-.phone-prefix{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:14px;font-weight:500;color:var(--text2);}
-.input-field{flex:1;background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:all 0.2s;}
-.input-field:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(26,107,74,0.1);background:#fff;}
-.input-field::placeholder{color:var(--text3);}
-.login-btn{width:100%;background:var(--green);color:#fff;border:none;padding:16px;border-radius:var(--radius-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;}
-.login-btn:hover{background:#155a3e;}
+#login{flex-direction:column;align-items:center;justify-content:center;background:var(--bg);gap:20px;padding:24px;}
+.lh{text-align:center;animation:riseIn 0.5s ease forwards;}
+.lh h2{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;margin-bottom:6px;}
+.lh p{color:var(--t2);font-size:14px;}
+.lcard{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:32px;width:100%;max-width:400px;box-shadow:var(--shl);animation:riseIn 0.5s ease 0.1s both;display:flex;flex-direction:column;align-items:center;gap:18px;}
+.tidbadge{background:var(--gl);border:1px solid rgba(26,107,74,0.2);border-radius:12px;padding:8px 16px;font-size:13px;font-weight:600;color:var(--green);}
+.qrf{position:relative;width:200px;height:200px;border-radius:16px;overflow:hidden;background:#fff;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;}
+.qrc{position:absolute;width:17px;height:17px;border-color:var(--green);border-style:solid;z-index:3;}
+.qrc.tl{top:6px;left:6px;border-width:3px 0 0 3px;border-radius:3px 0 0 0;}
+.qrc.tr{top:6px;right:6px;border-width:3px 3px 0 0;border-radius:0 3px 0 0;}
+.qrc.bl{bottom:6px;left:6px;border-width:0 0 3px 3px;border-radius:0 0 0 3px;}
+.qrc.br{bottom:6px;right:6px;border-width:0 3px 3px 0;border-radius:0 0 3px 0;}
+.qrbeam{position:absolute;width:88%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);animation:beam 2s ease-in-out infinite;z-index:2;}
+#loginQRBox{width:160px;height:160px;display:flex;align-items:center;justify-content:center;}
+#loginQRBox canvas,#loginQRBox img{width:160px!important;height:160px!important;}
+.qhint{font-size:12px;color:var(--t3);text-align:center;line-height:1.6;}
+.div{width:100%;display:flex;align-items:center;gap:10px;color:var(--t3);font-size:12px;}
+.div::before,.div::after{content:'';flex:1;height:1px;background:var(--border);}
+.prow{display:flex;gap:8px;width:100%;}
+.ppre{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;font-size:14px;color:var(--t2);white-space:nowrap;}
+.inp{flex:1;background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--rs);padding:12px 15px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--t);outline:none;transition:all 0.2s;}
+.inp:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(26,107,74,0.1);background:#fff;}
+.inp::placeholder{color:var(--t3);}
+.lbtn{width:100%;background:var(--green);color:#fff;border:none;padding:15px;border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;opacity:0.5;}
+.lbtn:not(:disabled){opacity:1;}
+.lbtn:hover:not(:disabled){background:var(--gd);}
 
 /* DASHBOARD */
 #dashboard{flex-direction:column;background:var(--bg);}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
-.topbar-logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;display:flex;align-items:center;gap:8px;}
-.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:blink 1.5s ease-in-out infinite;}
-.topbar-right{display:flex;align-items:center;gap:16px;}
-.session-chip{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:50px;padding:6px 14px;font-size:13px;color:var(--text2);font-weight:500;}
-.avatar{width:32px;height:32px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;}
-.dash-body{display:grid;grid-template-columns:1fr 360px;height:calc(100vh - 60px);overflow:hidden;}
-.left{padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.tlogo{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.ldot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.5s ease-in-out infinite;}
+.tr{display:flex;align-items:center;gap:10px;}
+.chip{display:flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--border);border-radius:50px;padding:5px 13px;font-size:12px;color:var(--t2);font-weight:500;}
+.av{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;}
+.dbody{display:grid;grid-template-columns:1fr 350px;height:calc(100vh - 56px);overflow:hidden;}
+.left{padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
 .left::-webkit-scrollbar{width:0;}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
-.card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
-.card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--text2);}
-.badge-live{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green);}
-.badge-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.5s ease-in-out infinite;}
-.cam-wrap{width:100%;height:260px;background:#1a1a1a;position:relative;overflow:hidden;}
-.cam-wrap img{width:100%;height:100%;object-fit:cover;}
-.cam-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#666;}
-.cam-placeholder span:first-child{font-size:40px;opacity:0.4;}
-.cam-placeholder span:last-child{font-size:12px;font-family:monospace;background:rgba(255,255,255,0.1);padding:6px 12px;border-radius:6px;color:#999;}
-.detection-overlay{position:absolute;border:2px solid var(--green);background:rgba(26,107,74,0.1);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;color:var(--green);display:none;animation:popIn 0.3s ease;}
-@keyframes popIn{from{transform:scale(0.8);opacity:0}to{transform:scale(1);opacity:1}}
-.cam-stats{display:flex;padding:12px 18px;}
-.cam-stat{flex:1;display:flex;flex-direction:column;gap:2px;padding:0 12px;border-right:1px solid var(--border);}
-.cam-stat:first-child{padding-left:0;}.cam-stat:last-child{border:none;}
-.cstat-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);}
-.cstat-val{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--text);}
-.det-alert{display:none;margin:0 16px 16px;background:var(--green-light);border:1px solid rgba(26,107,74,0.2);border-radius:12px;padding:14px 16px;align-items:center;gap:14px;}
-.det-emoji{font-size:28px;}.det-info{flex:1;}
-.det-name{font-weight:600;font-size:14px;}.det-price{font-size:13px;color:var(--green);font-weight:500;}
-.det-btn{background:var(--green);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;}
-.weight-card{padding:18px;display:flex;align-items:center;gap:20px;}
-.weight-left{flex:1;}.weight-right{flex:2;}
-.weight-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:4px;}
-.weight-num{font-family:'Playfair Display',serif;font-size:40px;font-weight:700;color:var(--amber);line-height:1;}
-.weight-unit{font-size:16px;color:var(--text3);margin-left:2px;}
-.wbar-bg{height:6px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-bottom:8px;}
-.wbar-fill{height:100%;background:linear-gradient(90deg,var(--amber),#e8934a);border-radius:4px;transition:width 0.6s ease;width:0%;}
-.weight-status-row{display:flex;align-items:center;gap:6px;font-size:12px;}
-.wstatus-chip{padding:3px 10px;border-radius:50px;font-size:11px;font-weight:600;}
-.wstatus-chip.added{background:var(--green-light);color:var(--green);}
-.wstatus-chip.removed{background:var(--red-light);color:var(--red);}
-.wstatus-chip.stable{background:var(--bg2);color:var(--text3);}
-.nutrition-panel{padding:18px;display:none;flex-direction:column;gap:14px;}
-.nutrition-panel.visible{display:flex;}
-.nutr-header{display:flex;align-items:center;gap:12px;}
-.nutr-emoji{font-size:32px;}.nutr-name{font-weight:600;font-size:16px;}.nutr-brand{font-size:12px;color:var(--text3);}
-.nutr-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-.nutr-cell{background:var(--bg2);border-radius:10px;padding:10px 8px;text-align:center;}
-.nutr-cell-val{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--text);}
-.nutr-cell-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-top:2px;}
-.nutr-tags{display:flex;flex-wrap:wrap;gap:6px;}
-.ntag{padding:4px 12px;border-radius:50px;font-size:11px;font-weight:500;background:var(--blue-light);color:var(--blue);}
-.ntag.warn{background:var(--amber-light);color:var(--amber);}.ntag.ok{background:var(--green-light);color:var(--green);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;}
+.ch{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);}
+.ct{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--t2);}
+.blv{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green);}
+.bdot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.5s ease-in-out infinite;}
+.camw{width:100%;height:240px;background:#111;position:relative;overflow:hidden;}
+.camw img{width:100%;height:100%;object-fit:cover;}
+.camp{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#666;}
+.camp span:first-child{font-size:36px;opacity:0.3;}
+.camp span:last-child{font-size:11px;font-family:monospace;background:rgba(255,255,255,0.07);padding:5px 10px;border-radius:6px;color:#888;}
 
-/* CART */
+/* Detection popups */
+.det-popup{position:absolute;top:12px;right:12px;max-width:190px;border-radius:12px;padding:10px 14px;display:none;z-index:20;flex-direction:column;gap:2px;}
+.det-popup.add{background:rgba(26,107,74,0.93);color:#fff;border:2px solid #2dcc7a;box-shadow:0 4px 20px rgba(26,107,74,0.4);animation:popGreen 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;}
+.det-popup.remove{background:rgba(192,57,43,0.93);color:#fff;border:2px solid #e74c3c;box-shadow:0 4px 20px rgba(192,57,43,0.4);top:auto;bottom:12px;animation:popRed 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;}
+.dp-icon{font-size:20px;margin-bottom:2px;}
+.dp-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:0.8;}
+.dp-name{font-size:13px;font-weight:600;}
+.dp-price{font-size:12px;opacity:0.85;}
+
+.cstats{display:flex;padding:10px 16px;}
+.cst{flex:1;display:flex;flex-direction:column;gap:1px;padding:0 10px;border-right:1px solid var(--border);}
+.cst:first-child{padding-left:0;}.cst:last-child{border:none;}
+.csl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);}
+.csv{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--t);}
+.wcard{padding:16px;display:flex;align-items:center;gap:16px;}
+.wl{flex:1;}.wr{flex:2;}
+.wlab{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:3px;}
+.wnum{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:var(--amber);line-height:1;}
+.wu{font-size:14px;color:var(--t3);margin-left:2px;}
+.wbb{height:5px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-bottom:6px;}
+.wbf{height:100%;background:linear-gradient(90deg,var(--amber),#e8934a);border-radius:4px;transition:width 0.6s ease;width:0%;}
+.wsr{display:flex;align-items:center;gap:6px;}
+.wsc{padding:3px 10px;border-radius:50px;font-size:11px;font-weight:600;}
+.wsc.added{background:var(--gl);color:var(--green);}
+.wsc.removed{background:var(--rl);color:var(--red);}
+.wsc.stable{background:var(--bg2);color:var(--t3);}
+.np{padding:16px;display:none;flex-direction:column;gap:12px;}
+.np.visible{display:flex;}
+.nh{display:flex;align-items:center;gap:10px;}
+.nem{font-size:28px;}.nn{font-weight:600;font-size:14px;}.nb{font-size:12px;color:var(--t3);}
+.ng{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.nc{background:var(--bg2);border-radius:8px;padding:8px 6px;text-align:center;}
+.ncv{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;}
+.ncl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;margin-top:1px;}
+.ntags{display:flex;flex-wrap:wrap;gap:5px;}
+.ntag{padding:3px 10px;border-radius:50px;font-size:11px;font-weight:500;background:var(--bl);color:var(--blue);}
+.ntag.warn{background:var(--al);color:var(--amber);}.ntag.ok{background:var(--gl);color:var(--green);}
+
+/* CART PANEL */
 .right{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
-.cart-top{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-.cart-heading{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;}
-.cart-badge{background:var(--green);color:#fff;font-size:11px;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
-.cart-list{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:6px;}
-.cart-list::-webkit-scrollbar{width:3px;}
-.cart-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
-.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:var(--text3);}
-.empty-icon{font-size:44px;opacity:0.25;}
-.cart-row{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;animation:slideRight 0.3s ease;transition:all 0.25s;cursor:pointer;}
-.cart-row:hover{border-color:var(--green);background:var(--green-light);}
-@keyframes slideRight{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}
-.row-emoji{font-size:22px;}.row-info{flex:1;}
-.row-name{font-size:13px;font-weight:500;}.row-price{font-size:12px;color:var(--green);font-weight:600;}
-.row-rm{width:26px;height:26px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:all 0.2s;}
-.row-rm:hover{background:var(--red-light);color:var(--red);border-color:var(--red);}
-.cart-bottom{padding:16px 20px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:12px;background:var(--surface2);}
-.total-line{display:flex;justify-content:space-between;align-items:baseline;}
-.total-label{font-size:13px;color:var(--text2);}
-.total-num{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--green);}
-.pay-btn{width:100%;background:var(--green);color:#fff;border:none;padding:17px;border-radius:12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.25s;box-shadow:0 4px 20px rgba(26,107,74,0.2);}
-.pay-btn:hover{background:#155a3e;transform:translateY(-1px);}
-.pay-btn:disabled{background:var(--border);color:var(--text3);box-shadow:none;transform:none;cursor:not-allowed;}
+.ctop{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.chead{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;}
+.cbadge{background:var(--green);color:#fff;font-size:11px;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.fraud-top{display:none;margin:8px;background:var(--rl);border:1.5px solid var(--red);border-radius:12px;padding:12px 16px;align-items:center;gap:10px;animation:riseIn 0.3s ease;}
+.fraud-top.active{display:flex;}
+.ft-icon{font-size:20px;}.ft-text{flex:1;font-size:13px;font-weight:600;color:var(--red);line-height:1.4;}
+.clist{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:5px;}
+.clist::-webkit-scrollbar{width:3px;}
+.clist::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:var(--t3);}
+.ei{font-size:40px;opacity:0.2;}
+.crow{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:10px 12px;display:flex;align-items:center;gap:9px;animation:slideR 0.3s ease;transition:all 0.2s;cursor:pointer;}
+.crow:hover{border-color:var(--green);background:var(--gl);}
+.re{font-size:20px;}.ri{flex:1;}
+.rn{font-size:13px;font-weight:500;}.rp{font-size:12px;color:var(--green);font-weight:600;}
+.rrm{width:24px;height:24px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--t3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;transition:all 0.2s;}
+.rrm:hover{background:var(--rl);color:var(--red);border-color:var(--red);}
+.cbot{padding:14px 18px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px;background:var(--surface2);}
+.tline{display:flex;justify-content:space-between;align-items:baseline;}
+.tlab{font-size:13px;color:var(--t2);}
+.tnum{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--green);}
+.pbtn{width:100%;background:var(--green);color:#fff;border:none;padding:15px;border-radius:11px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.25s;box-shadow:0 4px 18px rgba(26,107,74,0.2);}
+.pbtn:hover{background:var(--gd);transform:translateY(-1px);}
+.pbtn:disabled{background:var(--border);color:var(--t3);box-shadow:none;transform:none;cursor:not-allowed;}
 
 /* PAYMENT */
-#payment{flex-direction:column;align-items:center;justify-content:center;background:var(--bg);padding:24px;}
-.pay-wrapper{width:100%;max-width:520px;display:flex;flex-direction:column;gap:16px;animation:riseIn 0.5s ease forwards;}
-.back-btn{background:none;border:none;color:var(--text2);font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:'Plus Jakarta Sans',sans-serif;padding:0;margin-bottom:4px;}
-.back-btn:hover{color:var(--green);}
-.pay-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:32px;box-shadow:var(--shadow-lg);}
-.pay-card-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:4px;}
-.pay-card-sub{font-size:13px;color:var(--text2);margin-bottom:24px;}
-.pay-amount-big{font-family:'Playfair Display',serif;font-size:56px;font-weight:900;color:var(--green);line-height:1;margin-bottom:24px;}
-.pay-amount-big sup{font-size:28px;vertical-align:super;}
-.upi-qr-wrap{width:200px;height:200px;margin:0 auto 12px;border-radius:18px;background:#fff;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;}
-.upi-qr-wrap img{width:100%;height:100%;}
-.upi-hint{text-align:center;font-size:12px;color:var(--text3);margin-bottom:24px;display:flex;align-items:center;justify-content:center;gap:8px;}
-.bill-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px;}
-.bill-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px dashed var(--border);}
-.bill-row:last-child{border:none;font-weight:700;font-size:14px;color:var(--green);margin-top:4px;padding-top:10px;}
-.wa-row{display:flex;gap:8px;margin-bottom:12px;}
-.wa-input{flex:1;background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:all 0.2s;}
-.wa-input:focus{border-color:#25D366;background:#fff;}
-.wa-btn{background:#25D366;color:#fff;border:none;padding:14px 18px;border-radius:10px;cursor:pointer;font-size:20px;display:flex;align-items:center;transition:all 0.2s;}
-.wa-btn:hover{background:#1da851;}
-.done-btn{width:100%;background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);padding:15px;border-radius:10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;}
-.done-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-light);}
+#payment{flex-direction:column;align-items:center;justify-content:flex-start;background:var(--bg);padding:24px;overflow-y:auto;}
+.pw{width:100%;max-width:480px;display:flex;flex-direction:column;gap:14px;animation:riseIn 0.4s ease forwards;padding:12px 0;}
+.pcard{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:28px;box-shadow:var(--shl);}
+.pct{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:4px;}
+.pcs{font-size:13px;color:var(--t2);margin-bottom:20px;}
+.pamt{font-family:'Playfair Display',serif;font-size:56px;font-weight:900;color:var(--green);line-height:1;margin-bottom:20px;}
+.pamt sup{font-size:26px;vertical-align:super;}
+.upi-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:18px;}
+#upiQRBox{width:200px;height:200px;background:#fff;border:2px solid var(--border);border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;}
+#upiQRBox canvas,#upiQRBox img{width:184px!important;height:184px!important;}
+.upi-id{background:var(--gl);border:1px solid rgba(26,107,74,0.2);border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;color:var(--green);}
+.upi-hint{font-size:12px;color:var(--t3);text-align:center;}
+.bill-summary{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:12px;margin-bottom:16px;}
+.brow{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px dashed var(--border);}
+.brow:last-child{border:none;font-weight:700;font-size:14px;color:var(--green);margin-top:4px;padding-top:8px;}
+.confirm-btn{width:100%;background:var(--green);color:#fff;border:none;padding:16px;border-radius:11px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.25s;box-shadow:0 4px 18px rgba(26,107,74,0.2);}
+.confirm-btn:hover{background:var(--gd);}
 
-/* SUCCESS */
-#success{flex-direction:column;align-items:center;justify-content:center;background:var(--surface);text-align:center;gap:20px;}
-.success-circle{width:110px;height:110px;border-radius:50%;border:3px solid var(--green);background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:52px;animation:successBounce 0.7s cubic-bezier(0.175,0.885,0.32,1.275) forwards;}
-@keyframes successBounce{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
-.success-h{font-family:'Playfair Display',serif;font-size:40px;font-weight:900;animation:riseIn 0.5s ease 0.3s both;}
-.success-p{color:var(--text2);font-size:15px;animation:riseIn 0.5s ease 0.4s both;}
-.success-total{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--green);animation:riseIn 0.5s ease 0.5s both;}
-.new-btn{background:var(--green);color:#fff;border:none;padding:18px 48px;border-radius:50px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 8px 24px rgba(26,107,74,0.2);transition:all 0.3s;animation:riseIn 0.5s ease 0.6s both;margin-top:8px;}
-.new-btn:hover{background:#155a3e;transform:translateY(-2px);}
+/* BILL PAGE */
+#billpage{flex-direction:column;align-items:center;justify-content:flex-start;background:var(--bg);padding:24px;overflow-y:auto;}
+.bp-wrap{width:100%;max-width:480px;animation:riseIn 0.4s ease forwards;padding:12px 0;}
+.bp-card{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:28px;box-shadow:var(--shl);margin-bottom:14px;}
+.bp-header{text-align:center;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.bp-logo{font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:var(--green);margin-bottom:4px;}
+.bp-date{font-size:12px;color:var(--t3);}
+.bp-trolley{font-size:12px;color:var(--t2);margin-top:4px;font-weight:500;}
+.bp-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+.bp-item:last-child{border:none;}
+.bp-il{display:flex;align-items:center;gap:10px;}
+.bp-em{font-size:20px;}
+.bp-nm{font-size:14px;font-weight:500;}
+.bp-pr{font-size:14px;font-weight:600;color:var(--green);}
+.bp-total-row{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0 0;border-top:2px solid var(--border);}
+.bp-tl{font-size:14px;color:var(--t2);}
+.bp-tn{font-family:'Playfair Display',serif;font-size:32px;font-weight:900;color:var(--green);}
+.wa-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--sh);margin-bottom:12px;}
+.wa-title{font-size:13px;font-weight:600;color:var(--t2);margin-bottom:12px;}
+.wa-row{display:flex;gap:8px;}
+.wai{flex:1;background:var(--bg2);border:1.5px solid var(--border);border-radius:9px;padding:12px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--t);outline:none;transition:all 0.2s;}
+.wai:focus{border-color:#25D366;background:#fff;}
+.wab{background:#25D366;color:#fff;border:none;padding:12px 16px;border-radius:9px;cursor:pointer;display:flex;align-items:center;transition:all 0.2s;flex-shrink:0;}
+.wab:hover{background:#1da851;}
+.sent-badge{display:none;margin-top:10px;background:var(--gl);border:1px solid rgba(26,107,74,0.3);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--green);font-weight:500;align-items:center;gap:6px;}
+.sent-badge.show{display:flex;}
+.done-btn{width:100%;background:var(--green);color:#fff;border:none;padding:16px;border-radius:11px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.25s;box-shadow:0 4px 18px rgba(26,107,74,0.2);}
+.done-btn:hover{background:var(--gd);}
+
+/* THANK YOU */
+#thankyou{flex-direction:column;align-items:center;justify-content:center;background:var(--surface);text-align:center;gap:16px;}
+.ty-circle{width:100px;height:100px;border-radius:50%;border:3px solid var(--green);background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:48px;animation:bounce 0.7s cubic-bezier(0.175,0.885,0.32,1.275) forwards;box-shadow:0 0 36px rgba(26,107,74,0.15);}
+.ty-h{font-family:'Playfair Display',serif;font-size:36px;font-weight:900;animation:riseIn 0.5s ease 0.3s both;}
+.ty-p{color:var(--t2);font-size:15px;animation:riseIn 0.5s ease 0.4s both;}
+.ty-total{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green);animation:riseIn 0.5s ease 0.5s both;}
+.ty-bar-wrap{width:200px;height:4px;background:var(--border);border-radius:4px;overflow:hidden;animation:riseIn 0.5s ease 0.6s both;}
+.ty-bar{height:100%;background:var(--green);border-radius:4px;animation:countdown 5s linear forwards;}
+.ty-note{font-size:12px;color:var(--t3);animation:riseIn 0.5s ease 0.7s both;}
 
 /* TOAST */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;border-radius:50px;padding:12px 24px;font-size:13px;font-weight:500;z-index:9999;transition:transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);box-shadow:var(--shadow-lg);white-space:nowrap;display:flex;align-items:center;gap:8px;pointer-events:none;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--t);color:#fff;border-radius:50px;padding:10px 20px;font-size:13px;font-weight:500;z-index:9999;transition:transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);box-shadow:var(--shl);white-space:nowrap;pointer-events:none;}
 .toast.show{transform:translateX(-50%) translateY(0);}
 </style>
 </head>
@@ -191,545 +229,646 @@ body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans
 
 <!-- STARTUP -->
 <div id="startup" class="screen active">
-  <div class="startup-bg"></div>
-  <div class="startup-dots"></div>
-  <div class="startup-content">
-    <div class="startup-badge"><span class="startup-badge-dot"></span>AI-Powered Shopping</div>
-    <h1 class="startup-title">Smart<span>Trolley</span></h1>
-    <p class="startup-sub">Scan products automatically. Pay instantly. No queues.</p>
-    <div class="steps-row">
-      <div class="step-pill"><span class="step-num">1</span>Scan QR</div>
-      <div class="step-pill"><span class="step-num">2</span>Shop freely</div>
-      <div class="step-pill"><span class="step-num">3</span>Pay & go</div>
+  <div class="sbg"></div><div class="sdots"></div>
+  <div class="sc">
+    <div class="sbadge"><span class="sdot"></span>AI-Powered Shopping</div>
+    <h1 class="stitle">Smart<span>Trolley</span></h1>
+    <p class="ssub">Scan products automatically. Pay instantly. No queues.</p>
+    <div class="srow">
+      <div class="spill"><span class="snum">1</span>Link Trolley</div>
+      <div class="spill"><span class="snum">2</span>Shop freely</div>
+      <div class="spill"><span class="snum">3</span>Pay &amp; go</div>
     </div>
-    <button class="start-btn" onclick="goTo('login')">Begin Shopping →</button>
+    <button class="sbtn" onclick="goTo('login')">Begin Shopping →</button>
   </div>
 </div>
 
 <!-- LOGIN -->
 <div id="login" class="screen">
-  <div class="login-header">
-    <h2>Link Your Trolley</h2>
-    <p>Scan the QR code on your trolley with your phone</p>
-  </div>
-  <div class="login-card">
-    <div class="trolley-id-badge">🛒 Trolley #<span id="trolleyId">T-0000</span></div>
-    <div class="qr-frame">
-      <div class="qr-corner tl"></div><div class="qr-corner tr"></div>
-      <div class="qr-corner bl"></div><div class="qr-corner br"></div>
-      <div class="qr-scan-beam"></div>
-      <div class="qr-img-wrap"><img id="trolleyQR" src="" alt="Trolley QR"></div>
+  <div class="lh"><h2>Link Your Trolley</h2><p>Enter your WhatsApp number to start</p></div>
+  <div class="lcard">
+    <div class="tidbadge">🛒 Trolley #<span id="trolleyId">T-0000</span></div>
+    <div class="qrf">
+      <div class="qrc tl"></div><div class="qrc tr"></div>
+      <div class="qrc bl"></div><div class="qrc br"></div>
+      <div class="qrbeam"></div>
+      <div id="loginQRBox"></div>
     </div>
-    <p class="qr-hint">📱 Open your camera app and scan this QR.<br>Or enter your WhatsApp number below.</p>
-    <div class="divider">or enter manually</div>
-    <div class="phone-row">
-      <div class="phone-prefix">🇮🇳 +91</div>
-      <input class="input-field" id="loginPhone" type="tel" placeholder="10-digit number" maxlength="10">
+    <p class="qhint">📱 Scan QR to open on phone — or enter number below</p>
+    <div class="div">enter your WhatsApp number</div>
+    <div class="prow">
+      <div class="ppre">🇮🇳 +91</div>
+      <input class="inp" id="loginPhone" type="tel" placeholder="10-digit WhatsApp number" maxlength="10" oninput="onPhoneInput(this.value)">
     </div>
-    <button class="login-btn" onclick="doLogin()">Start Shopping Session</button>
+    <button class="lbtn" id="loginBtn" onclick="doLogin()" disabled>Start Shopping →</button>
   </div>
 </div>
 
 <!-- DASHBOARD -->
 <div id="dashboard" class="screen">
   <div class="topbar">
-    <div class="topbar-logo">SmartTrolley<div class="logo-dot"></div></div>
-    <div class="topbar-right">
-      <div class="session-chip">Trolley #<span id="topTrolleyId">T-0000</span></div>
-      <div class="session-chip"><div class="avatar" id="userInit">G</div><span id="topPhone">Guest</span></div>
+    <div class="tlogo">SmartTrolley<div class="ldot"></div></div>
+    <div class="tr">
+      <div class="chip">🛒 <span id="topTrolleyId">T-0000</span></div>
+      <div class="chip"><div class="av" id="userInit">G</div><span id="topPhone">Guest</span></div>
     </div>
   </div>
-  <div class="dash-body">
+  <div class="dbody">
     <div class="left">
+
+      <!-- Camera card -->
       <div class="card">
-        <div class="card-head">
-          <span class="card-title">Live Camera Detection</span>
-          <span class="badge-live"><span class="badge-dot"></span>Live</span>
-        </div>
-        <div class="cam-wrap">
-          <img id="camFeed" src="" style="display:none">
-          <div class="cam-placeholder" id="camPlaceholder">
-            <span>📷</span><span>Connect Pi camera to see live feed</span>
+        <div class="ch"><span class="ct">Live Detection</span><span class="blv"><span class="bdot"></span>Active</span></div>
+        <div class="camw">
+          <img id="camFeed" src="" style="display:none" onerror="this.style.display='none'">
+          <div class="camp" id="camPlaceholder"><span>📷</span><span>Pi camera feed</span></div>
+          <!-- GREEN popup: item added -->
+          <div class="det-popup add" id="addPopup">
+            <div class="dp-icon" id="addIcon">📦</div>
+            <div class="dp-label">✅ Item Added</div>
+            <div class="dp-name" id="addName">—</div>
+            <div class="dp-price" id="addPrice">₹0</div>
           </div>
-          <div class="detection-overlay" id="detOverlay"></div>
-        </div>
-        <div class="cam-stats">
-          <div class="cam-stat"><span class="cstat-label">FPS</span><span class="cstat-val" id="fpsStat">—</span></div>
-          <div class="cam-stat"><span class="cstat-label">Confidence</span><span class="cstat-val" id="confStat">—</span></div>
-          <div class="cam-stat"><span class="cstat-label">Detected</span><span class="cstat-val" id="detCount">0</span></div>
-          <div class="cam-stat"><span class="cstat-label">Status</span><span class="cstat-val" id="detStatus" style="font-size:13px;color:var(--green)">Scanning</span></div>
-        </div>
-        <div class="det-alert" id="detAlert">
-          <span class="det-emoji" id="detEmoji">📦</span>
-          <div class="det-info">
-            <div class="det-name" id="detName">Item</div>
-            <div class="det-price" id="detPrice">₹0 — added to cart</div>
+          <!-- RED popup: item removed -->
+          <div class="det-popup remove" id="removePopup">
+            <div class="dp-icon" id="removeIcon">🗑️</div>
+            <div class="dp-label">❌ Item Removed</div>
+            <div class="dp-name" id="removeName">—</div>
+            <div class="dp-price" id="removePrice">₹0</div>
           </div>
-          <button class="det-btn" onclick="dismissAlert()">✓ Got it</button>
+        </div>
+        <div class="cstats">
+          <div class="cst"><span class="csl">FPS</span><span class="csv" id="fpsStat">—</span></div>
+          <div class="cst"><span class="csl">Confidence</span><span class="csv" id="confStat">—</span></div>
+          <div class="cst"><span class="csl">Items</span><span class="csv" id="detCount">0</span></div>
+          <div class="cst"><span class="csl">Status</span><span class="csv" id="detStatus" style="font-size:12px;color:var(--green)">Scanning</span></div>
         </div>
       </div>
+
+      <!-- Weight card -->
       <div class="card">
-        <div class="card-head">
-          <span class="card-title">Arduino Weight Sensor</span>
-          <span class="badge-live" style="color:var(--amber)"><span class="badge-dot" style="background:var(--amber)"></span>HX711</span>
-        </div>
-        <div class="weight-card">
-          <div class="weight-left">
-            <div class="weight-label">Current Weight</div>
-            <div class="weight-num" id="weightNum">0<span class="weight-unit">g</span></div>
-          </div>
-          <div class="weight-right">
-            <div class="wbar-bg"><div class="wbar-fill" id="wbarFill"></div></div>
-            <div class="weight-status-row">
-              <span class="wstatus-chip stable" id="wstatChip">Stable</span>
-              <span id="wdeltaText" style="font-size:12px;color:var(--text3)">Place items in trolley</span>
-            </div>
+        <div class="ch"><span class="ct">Weight Sensor</span><span class="blv" style="color:var(--amber)"><span class="bdot" style="background:var(--amber)"></span>HX711</span></div>
+        <div class="wcard">
+          <div class="wl"><div class="wlab">Weight</div><div class="wnum" id="weightNum">0<span class="wu">g</span></div></div>
+          <div class="wr">
+            <div class="wbb"><div class="wbf" id="wbarFill"></div></div>
+            <div class="wsr"><span class="wsc stable" id="wstatChip">Stable</span><span id="wdeltaText" style="font-size:12px;color:var(--t3)">Place items in trolley</span></div>
           </div>
         </div>
       </div>
-      <div class="card" id="nutritionCard">
-        <div class="card-head">
-          <span class="card-title">Product Nutrition Info</span>
-          <span style="font-size:12px;color:var(--text3)">Last scanned item</span>
-        </div>
-        <div class="nutrition-panel" id="nutritionPanel"></div>
-        <div style="padding:24px;text-align:center;color:var(--text3);font-size:13px" id="nutritionEmpty">Scan a product to see nutrition details</div>
+
+      <!-- Nutrition card -->
+      <div class="card">
+        <div class="ch"><span class="ct">Nutrition Info</span><span style="font-size:12px;color:var(--t3)" id="nutLabel">Last scanned</span></div>
+        <div class="np" id="nutritionPanel"></div>
+        <div style="padding:20px;text-align:center;color:var(--t3);font-size:13px" id="nutritionEmpty">Scan a product to see details</div>
       </div>
     </div>
 
+    <!-- CART -->
     <div class="right">
-      <div class="cart-top">
-        <span class="cart-heading">Cart</span>
-        <span class="cart-badge" id="cartBadge">0</span>
+      <div class="ctop"><span class="chead">Cart</span><span class="cbadge" id="cartBadge">0</span></div>
+      <div class="fraud-top" id="fraudBanner">
+        <span class="ft-icon">🚨</span>
+        <span class="ft-text" id="fraudText">Cart changed during payment. Please review and pay again.</span>
       </div>
-      <div class="cart-list" id="cartList">
-        <div class="empty-state">
-          <span class="empty-icon">🛒</span>
-          <span>Cart is empty</span>
-          <span style="font-size:12px">Point camera at products</span>
-        </div>
+      <div class="clist" id="cartList">
+        <div class="empty"><span class="ei">🛒</span><span>Cart is empty</span><span style="font-size:12px">Point camera at products</span></div>
       </div>
-      <div class="cart-bottom">
-        <div class="total-line">
-          <span class="total-label">Total Amount</span>
-          <span class="total-num" id="totalNum">₹0</span>
-        </div>
-        <button class="pay-btn" id="payBtn" onclick="goToPayment()" disabled>Pay Now →</button>
+      <div class="cbot">
+        <div class="tline"><span class="tlab">Total</span><span class="tnum" id="totalNum">₹0</span></div>
+        <button class="pbtn" id="payBtn" onclick="goToPayment()" disabled>Proceed to Pay →</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- PAYMENT -->
+<!-- PAYMENT PAGE -->
 <div id="payment" class="screen">
-  <div class="pay-wrapper">
-    <button class="back-btn" onclick="goTo('dashboard')">← Back to cart</button>
-    <div class="pay-card">
-      <div class="pay-card-title">Complete Payment</div>
-      <div class="pay-card-sub">Scan QR or pay via any UPI app</div>
-      <div class="pay-amount-big"><sup>₹</sup><span id="payAmt">0</span></div>
-      <div class="upi-qr-wrap"><img id="upiQR" src="" alt="UPI QR Code"></div>
-      <div class="upi-hint"><span>🏦</span>GPay · PhonePe · Paytm · BHIM · Any UPI</div>
-      <div class="bill-box" id="billBox"></div>
+  <div class="pw">
+    <div class="pcard">
+      <div class="pct">Scan &amp; Pay</div>
+      <div class="pcs">Open GPay / PhonePe / any UPI app and scan the QR</div>
+      <div class="pamt"><sup>₹</sup><span id="payAmt">0</span></div>
+      <div class="upi-wrap">
+        <div id="upiQRBox"></div>
+        <div class="upi-id">📲 sherinsajan784-2@oksbi</div>
+        <div class="upi-hint">GPay · PhonePe · Paytm · BHIM · Any UPI</div>
+      </div>
+      <div class="bill-summary" id="payBillBox"></div>
+      <button class="confirm-btn" onclick="confirmPayment()">✅ &nbsp; I've Paid — View Receipt</button>
+    </div>
+  </div>
+</div>
+
+<!-- BILL RECEIPT PAGE -->
+<div id="billpage" class="screen">
+  <div class="bp-wrap">
+    <div class="bp-card">
+      <div class="bp-header">
+        <div class="bp-logo">🛒 SmartTrolley</div>
+        <div class="bp-date" id="bpDate">—</div>
+        <div class="bp-trolley" id="bpTrolleyInfo">Trolley — Customer</div>
+      </div>
+      <div id="bpItems"></div>
+      <div class="bp-total-row">
+        <span class="bp-tl">Amount Paid</span>
+        <span class="bp-tn" id="bpTotal">₹0</span>
+      </div>
+    </div>
+
+    <div class="wa-card">
+      <div class="wa-title">📤 Send receipt to WhatsApp</div>
       <div class="wa-row">
-        <input class="wa-input" id="waPhone" type="tel" placeholder="WhatsApp number for bill">
-        <button class="wa-btn" onclick="sendBill()">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        <input class="wai" id="waPhone" type="tel" placeholder="WhatsApp number (+91...)">
+        <button class="wab" onclick="sendBill()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         </button>
       </div>
-      <button class="done-btn" onclick="completePurchase()">✅ &nbsp; Payment Done — Reset & New Session</button>
+      <div class="sent-badge" id="sentBadge">✅ Bill + PDF receipt sent to WhatsApp!</div>
     </div>
+
+    <button class="done-btn" onclick="doneBill()">✓ &nbsp; Done — Verified Receipt</button>
   </div>
 </div>
 
-<!-- SUCCESS -->
-<div id="success" class="screen">
-  <div class="success-circle">✓</div>
-  <h2 class="success-h">All Done!</h2>
-  <p class="success-p">Bill sent via WhatsApp · Cart reset · Thank you!</p>
-  <p class="success-total" id="successTotal"></p>
-  <button class="new-btn" onclick="newSession()">🛒 &nbsp; New Shopping Session</button>
+<!-- THANK YOU PAGE -->
+<div id="thankyou" class="screen">
+  <div class="ty-circle">✓</div>
+  <h2 class="ty-h">Thank You!</h2>
+  <p class="ty-p">Payment complete · Receipt sent · See you again!</p>
+  <p class="ty-total" id="tyTotal"></p>
+  <div class="ty-bar-wrap"><div class="ty-bar" id="tyBar"></div></div>
+  <p class="ty-note">Starting new session in 5 seconds...</p>
 </div>
 
-<div class="toast" id="toast"><span id="toastTxt"></span></div>
+<div class="toast" id="toast"></div>
 
 <script>
-// ════════════════════════════════════
+// ════════════════════════════════
 // CONFIG
-// ════════════════════════════════════
+// ════════════════════════════════
 const RENDER_URL = "https://smart-trolley-owlx.onrender.com";
+const UPI_ID     = "sherinsajan784-2@oksbi";
+const UPI_NAME   = "SmartTrolley";
 
-// ════════════════════════════════════
+// ════════════════════════════════
 // STATE
-// ════════════════════════════════════
+// ════════════════════════════════
 let cart = [];
-let totalDetected = 0;
-let currentPhone = "";
-let trolleyNum = "";
-let pollTimer = null;
-let weightTimer = null;
-let demoTimer = null;
-let lastWeight = 0;
-let billSent = false;
-let piConnected = false;
-let demoIdx = 0;
+let totalDetected  = 0;
+let currentPhone   = "";
+let trolleyNum     = "";
+let pollTimer      = null;
+let weightTimer    = null;
+let demoTimer      = null;
+let lastWeight     = 0;
+let piConnected    = false;
+let demoIdx        = 0;
 let lastServerCount = 0;
+let onPaymentPage  = false;
+let paidTotal      = 0;
+let addPopTimer    = null;
+let removePopTimer = null;
 
-// ════════════════════════════════════
+// ════════════════════════════════
 // DATA
-// ════════════════════════════════════
-const DEMO_ITEMS = [
-  {name:"Sprite 400ml",price:30},
-  {name:"Maggi 140g",price:25},
-  {name:"krackjack 120g",price:20},
-  {name:"Garnier Men",price:199},
-  {name:"Globe Cream",price:85}
+// ════════════════════════════════
+const DEMO = [
+  {name:"Sprite 400ml",price:30},{name:"Maggi 140g",price:25},
+  {name:"krackjack 120g",price:20},{name:"Garnier Men",price:199},{name:"Globe Cream",price:85}
 ];
-
-const NUTRITION = {
-  "Book Record":      {cal:0,carbs:0,protein:0,fat:0,tags:["Stationery"],allergens:[]},
-  "Brustro Pencils":  {cal:0,carbs:0,protein:0,fat:0,tags:["Art Supply"],allergens:[]},
-  "Garnier Men":      {cal:0,carbs:0,protein:0,fat:0,tags:["Skincare","Paraben-Free"],allergens:["Fragrance"]},
-  "krackjack 120g":   {cal:490,carbs:67,protein:6,fat:22,tags:["Biscuit","Contains Gluten"],allergens:["Wheat","Milk"]},
-  "krackjack 180g":   {cal:490,carbs:67,protein:6,fat:22,tags:["Biscuit","Contains Gluten"],allergens:["Wheat","Milk"]},
-  "Sprite 1L":        {cal:43,carbs:11,protein:0,fat:0,tags:["Beverage","Veg"],allergens:[]},
-  "Sprite 400ml":     {cal:43,carbs:11,protein:0,fat:0,tags:["Beverage","Veg"],allergens:[]},
-  "Maggi 140g":       {cal:385,carbs:55,protein:9,fat:14,tags:["Noodles","Contains Gluten"],allergens:["Wheat"]},
-  "Maggi 280g":       {cal:385,carbs:55,protein:9,fat:14,tags:["Noodles","Contains Gluten"],allergens:["Wheat"]},
-  "iva Liquid 500ml": {cal:0,carbs:0,protein:0,fat:0,tags:["Detergent","Non-edible"],allergens:[]},
-  "Globe Cream":      {cal:0,carbs:0,protein:0,fat:0,tags:["Skincare"],allergens:["Fragrance"]},
-  "Soudal paint":     {cal:0,carbs:0,protein:0,fat:0,tags:["Non-edible","Hardware"],allergens:[]}
+const NUT = {
+  "Book Record":      {cal:0,carbs:0,protein:0,fat:0,tags:["Stationery"],al:[]},
+  "Brustro Pencils":  {cal:0,carbs:0,protein:0,fat:0,tags:["Art Supply"],al:[]},
+  "Garnier Men":      {cal:0,carbs:0,protein:0,fat:0,tags:["Skincare","Paraben-Free"],al:["Fragrance"]},
+  "krackjack 120g":   {cal:490,carbs:67,protein:6,fat:22,tags:["Biscuit","Gluten"],al:["Wheat","Milk"]},
+  "krackjack 180g":   {cal:490,carbs:67,protein:6,fat:22,tags:["Biscuit","Gluten"],al:["Wheat","Milk"]},
+  "Sprite 1L":        {cal:43,carbs:11,protein:0,fat:0,tags:["Beverage","Veg"],al:[]},
+  "Sprite 400ml":     {cal:43,carbs:11,protein:0,fat:0,tags:["Beverage","Veg"],al:[]},
+  "Maggi 140g":       {cal:385,carbs:55,protein:9,fat:14,tags:["Noodles","Gluten"],al:["Wheat"]},
+  "Maggi 280g":       {cal:385,carbs:55,protein:9,fat:14,tags:["Noodles","Gluten"],al:["Wheat"]},
+  "iva Liquid 500ml": {cal:0,carbs:0,protein:0,fat:0,tags:["Detergent","Non-edible"],al:[]},
+  "Globe Cream":      {cal:0,carbs:0,protein:0,fat:0,tags:["Skincare"],al:["Fragrance"]},
+  "Soudal paint":     {cal:0,carbs:0,protein:0,fat:0,tags:["Hardware","Non-edible"],al:[]}
 };
-
-const EMOJIS = {
+const EM = {
   "Book Record":"📒","Brustro Pencils":"✏️","Garnier Men":"🧴",
   "krackjack 120g":"🍪","krackjack 180g":"🍪","Sprite 1L":"🥤",
   "Sprite 400ml":"🥤","Maggi 140g":"🍜","Maggi 280g":"🍜",
   "iva Liquid 500ml":"🧼","Globe Cream":"🧴","Soudal paint":"🎨"
 };
 
-// ════════════════════════════════════
+// ════════════════════════════════
 // NAVIGATION
-// ════════════════════════════════════
+// ════════════════════════════════
 function goTo(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+}
+
+// ════════════════════════════════
+// QR CODE (inline library — no external image API)
+// ════════════════════════════════
+function makeQR(boxId, text, size) {
+  const el = document.getElementById(boxId);
+  el.innerHTML = '';
+  new QRCode(el, {
+    text, width: size, height: size,
+    colorDark: "#000000", colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+  });
 }
 
 function generateTrolleyQR() {
   const id = Math.floor(1000 + Math.random() * 9000);
   trolleyNum = "T-" + id;
   document.getElementById('trolleyId').textContent = trolleyNum;
-  const loginURL = `${RENDER_URL}/login?trolley=${trolleyNum}`;
-  const qrURL = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(loginURL)}&bgcolor=ffffff&color=1a6b4a&margin=2`;
-  document.getElementById('trolleyQR').src = qrURL;
+  makeQR('loginQRBox', `${RENDER_URL}/?trolley=${trolleyNum}`, 160);
 }
 
-// ════════════════════════════════════
-// LOGIN
-// ════════════════════════════════════
+function generateUPIQR(total) {
+  // This string opens GPay/PhonePe with exact amount pre-filled
+  const upiStr = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${total}&cu=INR&tn=${encodeURIComponent('SmartTrolley ' + trolleyNum)}`;
+  makeQR('upiQRBox', upiStr, 184);
+}
+
+// ════════════════════════════════
+// LOGIN — auto proceed on 10 digits
+// ════════════════════════════════
+function onPhoneInput(val) {
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = val.length !== 10;
+  if (val.length === 10) {
+    setTimeout(() => doLogin(), 500); // small delay so user sees complete number
+  }
+}
+
 function doLogin() {
-  const phone = document.getElementById('loginPhone').value.trim();
-  currentPhone = phone || "Guest";
+  const ph = document.getElementById('loginPhone').value.trim();
+  if (!ph || ph.length < 10) { toast("⚠️ Enter full 10-digit number"); return; }
+  currentPhone = ph;
   document.getElementById('topTrolleyId').textContent = trolleyNum;
-  document.getElementById('topPhone').textContent = currentPhone;
-  document.getElementById('userInit').textContent = currentPhone[0]?.toUpperCase() || 'G';
+  document.getElementById('topPhone').textContent = '+91 ' + currentPhone;
+  document.getElementById('userInit').textContent = currentPhone[0];
+  document.getElementById('fraudBanner').classList.remove('active');
   goTo('dashboard');
   simFPS();
   startWeightSim();
-  startServerPolling();
-  startDemoMode(); // always start demo — stops automatically when Pi connects
-  toast("✅ Session started!");
+  startPolling();
+  startDemo();
+  toast("✅ Welcome! Session started for +91 " + currentPhone);
 }
 
-// ════════════════════════════════════
-// SERVER POLLING — checks for real Pi data
-// ════════════════════════════════════
-function startServerPolling() {
+// ════════════════════════════════
+// SERVER POLLING
+// ════════════════════════════════
+function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
     try {
-      const res = await fetch(`${RENDER_URL}/cart`);
-      const data = await res.json();
-      const serverItems = data.items || [];
+      const r = await fetch(`${RENDER_URL}/cart`);
+      const d = await r.json();
+      const si = d.items || [];
 
-      // Pi just sent a new item
-      if (serverItems.length > lastServerCount) {
+      if (si.length > lastServerCount) {
         if (!piConnected) {
           piConnected = true;
-          if (demoTimer) clearInterval(demoTimer); // kill demo
-          cart = []; // clear demo items
-          toast("📡 Pi connected! Real detection active.");
+          if (demoTimer) clearInterval(demoTimer);
+          cart = [];
+          renderCart();
+          toast("📡 Pi connected! Live detection active.");
         }
-        // Add new items from server
-        for (let i = lastServerCount; i < serverItems.length; i++) {
-          cart.push(serverItems[i]);
-          onItemDetected(serverItems[i]);
+        for (let i = lastServerCount; i < si.length; i++) {
+          if (onPaymentPage) {
+            cartChangedDuringPayment("Item added during payment");
+          } else {
+            cart.push(si[i]);
+            showAddPopup(si[i]);
+          }
         }
-        renderCart();
+        if (!onPaymentPage) renderCart();
       }
 
-      // Pi removed an item (weight check)
-      if (piConnected && serverItems.length < lastServerCount) {
-        cart = serverItems;
-        renderCart();
-        toast("⚠️ Item removed from trolley");
+      if (piConnected && si.length < lastServerCount) {
+        if (onPaymentPage) {
+          cartChangedDuringPayment("Item removed during payment");
+        } else {
+          const diff = lastServerCount - si.length;
+          const removed = cart[cart.length - diff] || {name:'Item', price:0};
+          cart = si;
+          showRemovePopup(removed);
+          renderCart();
+        }
       }
 
-      lastServerCount = serverItems.length;
-
-      if (data.weight && data.weight > 0) updateWeight(data.weight);
-
-    } catch {
-      // server poll failed — keep demo running
-    }
+      lastServerCount = si.length;
+      if (d.weight && d.weight > 0 && piConnected) updateWeight(d.weight);
+    } catch {}
   }, 2000);
 }
 
-// ════════════════════════════════════
-// DEMO MODE — slow, only when Pi not connected
-// ════════════════════════════════════
-function startDemoMode() {
-  if (demoTimer) clearInterval(demoTimer);
-  // First item after 12 seconds
-  const firstDemo = setTimeout(() => {
-    if (!piConnected) addDemoItem();
-  }, 12000);
-
-  // Then every 20 seconds
-  demoTimer = setInterval(() => {
-    if (!piConnected) addDemoItem();
-  }, 20000);
+// ════════════════════════════════
+// FRAUD — cart changed on payment page
+// ════════════════════════════════
+function cartChangedDuringPayment(reason) {
+  onPaymentPage = false;
+  goTo('dashboard');
+  const b = document.getElementById('fraudBanner');
+  b.classList.add('active');
+  document.getElementById('fraudText').textContent =
+    `🚨 ${reason}! Total recalculated — review cart and pay again.`;
+  toast("🚨 Cart changed! Please pay again.");
 }
 
-function addDemoItem() {
-  if (piConnected) return; // safety check
-  const item = DEMO_ITEMS[demoIdx % DEMO_ITEMS.length];
+// ════════════════════════════════
+// DEMO MODE
+// ════════════════════════════════
+function startDemo() {
+  if (demoTimer) clearInterval(demoTimer);
+  setTimeout(() => { if (!piConnected && !onPaymentPage) addDemo(); }, 10000);
+  demoTimer = setInterval(() => { if (!piConnected && !onPaymentPage) addDemo(); }, 20000);
+}
+
+function addDemo() {
+  if (piConnected || onPaymentPage) return;
+  const item = DEMO[demoIdx % DEMO.length];
   demoIdx++;
   cart.push(item);
-  onItemDetected(item);
+  showAddPopup(item);
   renderCart();
 }
 
-// ════════════════════════════════════
-// ITEM DETECTED
-// ════════════════════════════════════
-function onItemDetected(item) {
+// ════════════════════════════════
+// DETECTION POPUPS
+// ════════════════════════════════
+function showAddPopup(item) {
   totalDetected++;
   document.getElementById('detCount').textContent = totalDetected;
-  document.getElementById('detStatus').textContent = "Detected!";
-  document.getElementById('detStatus').style.color = "var(--green)";
+  document.getElementById('detStatus').textContent = "Added!";
+  document.getElementById('confStat').textContent = (60 + Math.random() * 35).toFixed(0) + '%';
 
-  const ov = document.getElementById('detOverlay');
-  ov.textContent = `${EMOJIS[item.name]||'📦'} ${item.name}`;
-  ov.style.display = 'block';
-  ov.style.top = (15 + Math.random()*40) + '%';
-  ov.style.left = (10 + Math.random()*45) + '%';
+  document.getElementById('addIcon').textContent = EM[item.name] || '📦';
+  document.getElementById('addName').textContent = item.name;
+  document.getElementById('addPrice').textContent = '₹' + item.price;
 
-  document.getElementById('detEmoji').textContent = EMOJIS[item.name] || '📦';
-  document.getElementById('detName').textContent = item.name;
-  document.getElementById('detPrice').textContent = `₹${item.price} — added to cart`;
-  document.getElementById('detAlert').style.display = 'flex';
-  document.getElementById('confStat').textContent = (60+Math.random()*35).toFixed(0)+'%';
+  const pop = document.getElementById('addPopup');
+  pop.style.display = 'flex';
+  pop.style.animation = 'none'; pop.offsetHeight;
+  pop.style.animation = 'popGreen 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
 
-  showNutrition(item.name);
-
-  setTimeout(() => {
-    document.getElementById('detOverlay').style.display = 'none';
-    document.getElementById('detAlert').style.display = 'none';
+  if (addPopTimer) clearTimeout(addPopTimer);
+  addPopTimer = setTimeout(() => {
+    pop.style.display = 'none';
     document.getElementById('detStatus').textContent = 'Scanning';
-  }, 4000);
+  }, 3500);
 
+  showNut(item.name);
   toast(`🛒 ${item.name} added — ₹${item.price}`);
 }
 
-function dismissAlert() {
-  document.getElementById('detAlert').style.display = 'none';
+function showRemovePopup(item) {
+  document.getElementById('removeIcon').textContent = EM[item.name] || '🗑️';
+  document.getElementById('removeName').textContent = item.name;
+  document.getElementById('removePrice').textContent = '₹' + item.price;
+
+  const pop = document.getElementById('removePopup');
+  pop.style.display = 'flex';
+  pop.style.animation = 'none'; pop.offsetHeight;
+  pop.style.animation = 'popRed 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
+
+  if (removePopTimer) clearTimeout(removePopTimer);
+  removePopTimer = setTimeout(() => { pop.style.display = 'none'; }, 3500);
+
+  toast(`🗑️ ${item.name} removed — ₹${item.price}`);
 }
 
-// ════════════════════════════════════
+// ════════════════════════════════
 // NUTRITION
-// ════════════════════════════════════
-function showNutrition(name) {
-  const n = NUTRITION[name];
-  if (!n) return;
+// ════════════════════════════════
+function showNut(name) {
+  const n = NUT[name]; if (!n) return;
   document.getElementById('nutritionEmpty').style.display = 'none';
-  const panel = document.getElementById('nutritionPanel');
-  panel.classList.add('visible');
-  const isFood = n.cal > 0;
-  const tagColor = t => t.includes('Gluten')||t.includes('Contains') ? 'warn' : (t==='Veg'||t.includes('Free') ? 'ok' : '');
-  panel.innerHTML = `
-    <div class="nutr-header">
-      <span class="nutr-emoji">${EMOJIS[name]||'📦'}</span>
-      <div><div class="nutr-name">${name}</div><div class="nutr-brand">${isFood?'Per 100g':'Non-food item'}</div></div>
-    </div>
-    ${isFood?`<div class="nutr-grid">
-      <div class="nutr-cell"><div class="nutr-cell-val">${n.cal}</div><div class="nutr-cell-label">Calories</div></div>
-      <div class="nutr-cell"><div class="nutr-cell-val">${n.carbs}g</div><div class="nutr-cell-label">Carbs</div></div>
-      <div class="nutr-cell"><div class="nutr-cell-val">${n.protein}g</div><div class="nutr-cell-label">Protein</div></div>
-      <div class="nutr-cell"><div class="nutr-cell-val">${n.fat}g</div><div class="nutr-cell-label">Fat</div></div>
-    </div>`:'<div style="font-size:13px;color:var(--text3);text-align:center;padding:8px 0">No nutritional data</div>'}
-    <div class="nutr-tags">
-      ${n.tags.map(t=>`<span class="ntag ${tagColor(t)}">${t}</span>`).join('')}
-      ${n.allergens.map(a=>`<span class="ntag warn">⚠️ ${a}</span>`).join('')}
+  document.getElementById('nutLabel').textContent = name;
+  const p = document.getElementById('nutritionPanel');
+  p.classList.add('visible');
+  const isF = n.cal > 0;
+  const tc = t => t.includes('Gluten') ? 'warn' : (t === 'Veg' || t.includes('Free') ? 'ok' : '');
+  p.innerHTML = `
+    <div class="nh"><span class="nem">${EM[name]||'📦'}</span>
+    <div><div class="nn">${name}</div><div class="nb">${isF?'Per 100g':'Non-food product'}</div></div></div>
+    ${isF ? `<div class="ng">
+      <div class="nc"><div class="ncv">${n.cal}</div><div class="ncl">Cal</div></div>
+      <div class="nc"><div class="ncv">${n.carbs}g</div><div class="ncl">Carbs</div></div>
+      <div class="nc"><div class="ncv">${n.protein}g</div><div class="ncl">Protein</div></div>
+      <div class="nc"><div class="ncv">${n.fat}g</div><div class="ncl">Fat</div></div>
+    </div>` : '<div style="font-size:13px;color:var(--t3);text-align:center;padding:8px 0">No nutritional data</div>'}
+    <div class="ntags">
+      ${n.tags.map(t=>`<span class="ntag ${tc(t)}">${t}</span>`).join('')}
+      ${n.al.map(a=>`<span class="ntag warn">⚠️ ${a}</span>`).join('')}
     </div>`;
 }
 
-// ════════════════════════════════════
+// ════════════════════════════════
 // RENDER CART
-// ════════════════════════════════════
+// ════════════════════════════════
 function renderCart() {
-  const list = document.getElementById('cartList');
-  const total = cart.reduce((s,i) => s+i.price, 0);
+  const l = document.getElementById('cartList');
+  const total = cart.reduce((s, i) => s + i.price, 0);
   document.getElementById('cartBadge').textContent = cart.length;
   document.getElementById('totalNum').textContent = '₹' + total;
   document.getElementById('payBtn').disabled = cart.length === 0;
-
   if (!cart.length) {
-    list.innerHTML = `<div class="empty-state"><span class="empty-icon">🛒</span><span>Cart is empty</span><span style="font-size:12px">Point camera at products</span></div>`;
+    l.innerHTML = '<div class="empty"><span class="ei">🛒</span><span>Cart is empty</span><span style="font-size:12px">Point camera at products</span></div>';
     return;
   }
-
-  list.innerHTML = cart.map((item, i) => `
-    <div class="cart-row" id="cr${i}" onclick="showNutrition('${item.name}')">
-      <span class="row-emoji">${EMOJIS[item.name]||'📦'}</span>
-      <div class="row-info">
-        <div class="row-name">${item.name}</div>
-        <div class="row-price">₹${item.price}</div>
-      </div>
-      <button class="row-rm" onclick="event.stopPropagation();removeItem(${i})">✕</button>
+  l.innerHTML = cart.map((item, i) => `
+    <div class="crow" onclick="showNut('${item.name}')">
+      <span class="re">${EM[item.name]||'📦'}</span>
+      <div class="ri"><div class="rn">${item.name}</div><div class="rp">₹${item.price}</div></div>
+      <button class="rrm" onclick="event.stopPropagation();removeItem(${i})">✕</button>
     </div>`).join('');
 }
 
 async function removeItem(idx) {
+  const removed = cart[idx];
   cart.splice(idx, 1);
   if (piConnected) lastServerCount = cart.length;
+  showRemovePopup(removed);
   renderCart();
-  toast('🗑️ Item removed');
   try { await fetch(`${RENDER_URL}/remove/${idx}`); } catch {}
 }
 
-// ════════════════════════════════════
+// ════════════════════════════════
 // WEIGHT
-// ════════════════════════════════════
+// ════════════════════════════════
 function updateWeight(g) {
-  document.getElementById('weightNum').innerHTML = `${g}<span class="weight-unit">g</span>`;
-  document.getElementById('wbarFill').style.width = Math.min((g/5000)*100,100) + '%';
+  document.getElementById('weightNum').innerHTML = `${g}<span class="wu">g</span>`;
+  document.getElementById('wbarFill').style.width = Math.min((g / 5000) * 100, 100) + '%';
   const diff = Math.abs(g - lastWeight);
   if (diff > 40) {
-    const chip = document.getElementById('wstatChip');
-    const txt = document.getElementById('wdeltaText');
-    if (g > lastWeight) {
-      chip.className='wstatus-chip added'; chip.textContent='Item Added';
-      txt.textContent=`+${diff}g detected`;
-    } else {
-      chip.className='wstatus-chip removed'; chip.textContent='Item Removed';
-      txt.textContent=`-${diff}g — check cart`;
-    }
-    setTimeout(()=>{
-      chip.className='wstatus-chip stable'; chip.textContent='Stable';
-      txt.textContent='Weight stable';
-    }, 4000);
+    const c = document.getElementById('wstatChip');
+    const t = document.getElementById('wdeltaText');
+    if (g > lastWeight) { c.className='wsc added'; c.textContent='Added'; t.textContent=`+${diff}g`; }
+    else { c.className='wsc removed'; c.textContent='Removed'; t.textContent=`-${diff}g`; }
+    setTimeout(() => { c.className='wsc stable'; c.textContent='Stable'; t.textContent='Stable'; }, 4000);
   }
   lastWeight = g;
 }
 
-// ════════════════════════════════════
+// ════════════════════════════════
 // PAYMENT
-// ════════════════════════════════════
-async function goToPayment() {
-  goTo('payment');
-  const total = cart.reduce((s,i) => s+i.price, 0);
+// ════════════════════════════════
+function goToPayment() {
+  if (cart.length === 0) { toast('⚠️ Cart is empty'); return; }
+  onPaymentPage = true;
+  document.getElementById('fraudBanner').classList.remove('active');
+
+  const total = cart.reduce((s, i) => s + i.price, 0);
+  paidTotal = total;
   document.getElementById('payAmt').textContent = total;
-  document.getElementById('billBox').innerHTML =
-    cart.map(i=>`<div class="bill-row"><span>${EMOJIS[i.name]||''} ${i.name}</span><span>₹${i.price}</span></div>`).join('') +
-    `<div class="bill-row"><span>Total</span><span>₹${total}</span></div>`;
-  try {
-    const r = await fetch(`${RENDER_URL}/payment_qr`);
-    const d = await r.json();
-    document.getElementById('upiQR').src = d.qr;
-  } catch {
-    const link = `upi://pay?pa=sherinsajan784-2@oksbi&pn=SmartTrolley&am=${total}&cu=INR`;
-    document.getElementById('upiQR').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(link)}&color=1a6b4a`;
-  }
-  if (currentPhone) document.getElementById('waPhone').value = currentPhone;
-  billSent = false;
+
+  // Bill summary on payment page
+  document.getElementById('payBillBox').innerHTML =
+    cart.map(i => `<div class="brow"><span>${EM[i.name]||''} ${i.name}</span><span>₹${i.price}</span></div>`).join('') +
+    `<div class="brow"><span>Total</span><span>₹${total}</span></div>`;
+
+  // Generate UPI QR with exact total — opens GPay with amount pre-filled
+  generateUPIQR(total);
+
+  goTo('payment');
+  toast("💳 Scan QR to pay ₹" + total);
 }
 
+// ════════════════════════════════
+// CONFIRM PAYMENT → BILL PAGE
+// ════════════════════════════════
+async function confirmPayment() {
+  onPaymentPage = false;
+
+  const now = new Date();
+  document.getElementById('bpDate').textContent = now.toLocaleString('en-IN', {
+    day:'2-digit', month:'short', year:'numeric',
+    hour:'2-digit', minute:'2-digit'
+  });
+  document.getElementById('bpTrolleyInfo').textContent =
+    `Trolley ${trolleyNum} · +91 ${currentPhone}`;
+  document.getElementById('bpItems').innerHTML = cart.map(i => `
+    <div class="bp-item">
+      <div class="bp-il"><span class="bp-em">${EM[i.name]||'📦'}</span><span class="bp-nm">${i.name}</span></div>
+      <span class="bp-pr">₹${i.price}</span>
+    </div>`).join('');
+  document.getElementById('bpTotal').textContent = '₹' + paidTotal;
+  document.getElementById('sentBadge').classList.remove('show');
+
+  // Pre-fill WhatsApp with login number
+  document.getElementById('waPhone').value = currentPhone;
+
+  goTo('billpage');
+  toast("✅ Payment confirmed! Review your receipt.");
+
+  // Auto send bill since phone was captured at login
+  await sendBill();
+}
+
+// ════════════════════════════════
+// SEND WHATSAPP BILL + PDF
+// ════════════════════════════════
 async function sendBill() {
   const phone = document.getElementById('waPhone').value.trim();
   if (!phone) { toast('⚠️ Enter WhatsApp number'); return; }
-  toast('📤 Sending bill...');
+  toast('📤 Sending bill + PDF receipt...');
   try {
     const r = await fetch(`${RENDER_URL}/checkout`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({phone})
     });
     const d = await r.json();
-    if (d.status === 'success') { toast('✅ Bill sent to WhatsApp!'); billSent = true; }
+    if (d.status === 'success') {
+      document.getElementById('sentBadge').classList.add('show');
+      toast('✅ Bill + PDF receipt sent to WhatsApp!');
+    }
   } catch {
-    toast('✅ Bill sent! (demo mode)');
-    billSent = true;
+    document.getElementById('sentBadge').classList.add('show');
+    toast('✅ Receipt sent! (demo mode)');
   }
 }
 
-async function completePurchase() {
-  const total = cart.reduce((s,i)=>s+i.price,0);
-  const ok = confirm(`Have you paid ₹${total} via UPI?\nClick OK only after payment is complete.`);
-  if (!ok) { toast('⚠️ Please complete payment first'); return; }
-  document.getElementById('successTotal').textContent = `₹${total} paid`;
+// ════════════════════════════════
+// DONE BUTTON — verified receipt → thank you
+// ════════════════════════════════
+async function doneBill() {
+  document.getElementById('tyTotal').textContent = '₹' + paidTotal + ' paid';
+
   try { await fetch(`${RENDER_URL}/reset`); } catch {}
+
   if (pollTimer) clearInterval(pollTimer);
   if (weightTimer) clearInterval(weightTimer);
   if (demoTimer) clearInterval(demoTimer);
-  cart=[]; totalDetected=0; demoIdx=0; lastServerCount=0; piConnected=false;
+
+  cart = []; totalDetected = 0; demoIdx = 0;
+  lastServerCount = 0; piConnected = false;
+  onPaymentPage = false; paidTotal = 0;
   renderCart();
-  goTo('success');
+
+  goTo('thankyou');
+
+  // Reset countdown bar
+  const bar = document.getElementById('tyBar');
+  bar.style.animation = 'none'; bar.offsetHeight;
+  bar.style.animation = 'countdown 5s linear forwards';
+
+  // Auto new session after 5 seconds
+  setTimeout(() => startNewSession(), 5000);
 }
 
-function newSession() {
-  document.getElementById('loginPhone').value='';
-  document.getElementById('waPhone').value='';
+function startNewSession() {
+  document.getElementById('loginPhone').value = '';
+  document.getElementById('waPhone').value = '';
   document.getElementById('nutritionPanel').classList.remove('visible');
-  document.getElementById('nutritionEmpty').style.display='';
-  cart=[]; currentPhone=''; billSent=false;
-  piConnected=false; demoIdx=0; lastServerCount=0;
+  document.getElementById('nutritionEmpty').style.display = '';
+  document.getElementById('fraudBanner').classList.remove('active');
+  document.getElementById('sentBadge').classList.remove('show');
+  document.getElementById('loginBtn').disabled = true;
+  cart = []; currentPhone = ''; piConnected = false;
+  demoIdx = 0; lastServerCount = 0;
+  onPaymentPage = false; paidTotal = 0;
   generateTrolleyQR();
   goTo('startup');
 }
 
-// ════════════════════════════════════
-// SIMULATIONS
-// ════════════════════════════════════
+// ════════════════════════════════
+// SIMULATIONS (when Pi not connected)
+// ════════════════════════════════
 function simFPS() {
-  setInterval(()=>{
-    document.getElementById('fpsStat').textContent=(9+Math.random()*4).toFixed(1);
-  },1200);
+  setInterval(() => {
+    document.getElementById('fpsStat').textContent = (9 + Math.random() * 4).toFixed(1);
+  }, 1200);
 }
 
 let simW = 0;
 function startWeightSim() {
-  weightTimer = setInterval(()=>{
-    simW += (Math.random()-0.35)*15;
-    simW = Math.max(0,Math.min(simW,4000));
-    // only show simulated weight if Pi not connected
+  weightTimer = setInterval(() => {
+    simW += (Math.random() - 0.35) * 12;
+    simW = Math.max(0, Math.min(simW, 3000));
     if (!piConnected) updateWeight(Math.round(simW));
   }, 3000);
 }
 
 function toast(msg) {
   const t = document.getElementById('toast');
-  document.getElementById('toastTxt').textContent = msg;
+  t.textContent = msg;
   t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 3200);
+  setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-// ════════════════════════════════════
+// ════════════════════════════════
 // INIT
-// ════════════════════════════════════
+// ════════════════════════════════
 generateTrolleyQR();
-document.getElementById('loginPhone').addEventListener('keypress', e=>{
-  if(e.key==='Enter') doLogin();
+document.getElementById('loginPhone').addEventListener('keypress', e => {
+  if (e.key === 'Enter') doLogin();
 });
 </script>
 </body>
