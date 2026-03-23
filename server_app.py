@@ -220,7 +220,7 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
             "broadcast_name": "SmartTrolley_Bill",
             "receivers": [
                 {
-                    "whatsappNumber": f"91{phone}",
+                    "whatsappNumber": phone,
                     "customParams": [
                         {"name": "1", "value": str(trolley or "T-0000")},
                         {"name": "2", "value": str(phone)},
@@ -249,7 +249,7 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
             'Content-Type': 'application/json-patch+json'
         }
         msg_text = bill if bill and len(bill) > 0 else f"SmartTrolley Bill\nTotal: Rs.{total}\nThank you!"
-        url2 = f"{base}/api/v1/sendSessionMessage/91{phone}"
+        url2 = f"{base}/api/v1/sendSessionMessage/{phone}"
         r2 = req.post(url2, json={'messageText': msg_text}, headers=headers2, timeout=10)
         print(f"Wati session: {r2.status_code} {r2.text[:200]}")
         if r2.status_code == 200:
