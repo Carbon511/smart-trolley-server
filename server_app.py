@@ -6,6 +6,7 @@ import requests as req
 import hashlib
 import hmac
 from datetime import datetime
+from logger import log_purchase, read_logs
 
 app = Flask(__name__)
 
@@ -177,6 +178,14 @@ def checkout():
         bill = generate_bill(bill_items, bill_total)
 
         print(f"Sending bill to {phone} total=Rs.{bill_total} items={len(bill_items)}")
+	# Log the purchase
+        log_purchase(phone, bill_items, bill_total, payment_id, trolley)
+
+        # Deduct stock
+        for item in bill_items:
+            name = item.get('name')
+            if name in PRODUCTS and 'stock' in PRODUCTS[name]:
+                PRODUCTS[name]['stock'] = max(0, PRODUCTS[name]['stock'] - 1)
         print(f"Bill text length: {len(bill)}")
 
         # Try Wati first
@@ -275,6 +284,12 @@ def send_via_twilio(phone, bill):
     except Exception as e:
         print(f"Twilio error: {e}")
         return False
+
+@app.route('/owner')
+def owner_dashboard():
+    logs = read_logs()
+    logs = list(reversed(logs))
+    return render_template('owner.html', logs=logs, products=PRODUCTS)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
