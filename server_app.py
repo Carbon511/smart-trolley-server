@@ -175,10 +175,14 @@ def checkout():
             return jsonify({'status': 'error', 'message': 'No phone'}), 400
 
         # Clean phone number
-        phone = phone.replace('+91', '').replace(' ', '').replace('-', '')
-        if phone.startswith('91') and len(phone) == 12:
-            phone = phone[2:]
-        phone = phone[-10:]
+        phone = phone.strip()
+phone = phone.replace('+', '').replace(' ', '').replace('-', '')
+if phone.startswith('91') and len(phone) == 12:
+    phone = phone[2:]
+elif phone.startswith('910') and len(phone) == 13:
+    phone = phone[2:]
+phone = phone[-10:]
+print(f"Cleaned phone: {phone} length: {len(phone)}")
 
         if len(phone) != 10:
             return jsonify({'status': 'error', 'message': 'Invalid number'}), 400
@@ -235,7 +239,7 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
             "broadcast_name": "SmartTrolley_Bill",
             "receivers": [
                 {
-                    "whatsappNumber": f"91{phone}",
+                    "whatsappNumber": f"{phone}",
                     "customParams": [
                         {"name": "1", "value": trolley or "T-0000"},
                         {"name": "2", "value": phone},
@@ -257,8 +261,8 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
             'Authorization': f'Bearer {WATI_API_TOKEN}',
             'Content-Type': 'application/json-patch+json'
         }
-        url2 = f"{base}/api/v1/sendSessionMessage/91{phone}"
-        r2 = req.post(url2, json={'messageText': bill}, headers=headers2, timeout=10)
+        url2 = f"{base}/api/v1/sendSessionMessage/{phone}"
+r2 = req.post(url2, json={'messageText': bill if bill else 'SmartTrolley Bill'}, headers=headers2, timeout=10)
         print(f"Wati session: {r2.status_code} {r2.text[:100]}")
         if r2.status_code == 200:
             return True
