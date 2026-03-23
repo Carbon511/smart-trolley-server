@@ -176,7 +176,7 @@ def checkout():
         bill_total = int(float(total)) if total else sum(i['price'] for i in bill_items)
         bill = generate_bill(bill_items, bill_total)
 
-        print(f"Sending bill to +91{phone} total=Rs.{bill_total} items={len(bill_items)}")
+        print(f"Sending bill to {phone} total=Rs.{bill_total} items={len(bill_items)}")
         print(f"Bill text length: {len(bill)}")
 
         # Try Wati first
