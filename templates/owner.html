@@ -46,7 +46,7 @@
             <td>{{ log.phone }}</td>
             <td>{{ log.trolley }}</td>
             <td>
-                {% for item in log.items %}
+                {% for item in log['items'] %}
                     {{ item.name }} (Rs.{{ item.price }})<br>
                 {% endfor %}
             </td>
