@@ -69,7 +69,7 @@ def add_item():
     data = request.json or {}
     name = data.get('name', '').strip()
     if name in PRODUCTS:
-        item = {'name': name, 'price': PRODUCTS[name]}
+        item = {'name': name, 'price': PRODUCTS[name]['price']}
         cart.append(item)
         return jsonify({'status': 'added', 'item': item})
     return jsonify({'status': 'error', 'message': 'Product not found'}), 404
