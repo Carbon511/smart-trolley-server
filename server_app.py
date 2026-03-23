@@ -209,30 +209,34 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
         else:
             items_text = "Items purchased"
 
-       # Method 1 — approved template (whatsappNumber as QUERY PARAM)
-for num_format in [f"91{phone}", phone]:
-    url = f"{base}/api/v1/sendTemplateMessage?whatsappNumber={num_format}"
-    payload = {
-        "template_name": "smart_trolley_bill_receipt",
-        "broadcast_name": "SmartTrolley_Bill",
-        "parameters": [
-            {"name": "1", "value": str(trolley or "T-0000")},
-            {"name": "2", "value": str(phone)},
-            {"name": "3", "value": str(date_str)},
-            {"name": "4", "value": str(items_text)},
-            {"name": "5", "value": str(total)},
-            {"name": "6", "value": str(payment_id or "N/A")}
-        ]
-    }
-    r = req.post(url, json=payload, headers=headers, timeout=10)
-    print(f"Wati template [{num_format}]: {r.status_code} {r.text[:300]}")
-    try:
-        result = r.json()
-        if result.get('result') == True:
-            print(f"Wati SUCCESS with: {num_format}")
-            return True
-    except:
-        pass
+        # Method 1 — approved template (whatsappNumber as QUERY PARAM)
+        headers = {                                          # ← was missing entirely
+            'Authorization': f'Bearer {WATI_API_TOKEN}',
+            'Content-Type': 'application/json'
+        }
+        for num_format in [f"91{phone}", phone]:             # ← indented inside try
+            url = f"{base}/api/v1/sendTemplateMessage?whatsappNumber={num_format}"
+            payload = {
+                "template_name": "smart_trolley_bill_receipt",
+                "broadcast_name": "SmartTrolley_Bill",
+                "parameters": [
+                    {"name": "1", "value": str(trolley or "T-0000")},
+                    {"name": "2", "value": str(phone)},
+                    {"name": "3", "value": str(date_str)},
+                    {"name": "4", "value": str(items_text)},
+                    {"name": "5", "value": str(total)},
+                    {"name": "6", "value": str(payment_id or "N/A")}
+                ]
+            }
+            r = req.post(url, json=payload, headers=headers, timeout=10)
+            print(f"Wati template [{num_format}]: {r.status_code} {r.text[:300]}")
+            try:
+                result = r.json()
+                if result.get('result') == True:
+                    print(f"Wati SUCCESS with: {num_format}")
+                    return True
+            except:
+                pass
 
         # Method 2 — session message
         headers2 = {
@@ -256,7 +260,6 @@ for num_format in [f"91{phone}", phone]:
     except Exception as e:
         print(f"Wati error: {e}")
         return False
-
 def send_via_twilio(phone, bill):
     try:
         from twilio.rest import Client
