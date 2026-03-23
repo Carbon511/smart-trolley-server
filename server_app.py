@@ -209,39 +209,30 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
         else:
             items_text = "Items purchased"
 
-        # Method 1 — approved template
-        headers1 = {
-            'Authorization': f'Bearer {WATI_API_TOKEN}',
-            'Content-Type': 'application/json'
-        }
-        url1 = f"{base}/api/v1/sendTemplateMessage"
-        payload1 = {
-            "template_name": "smart_trolley_bill_receipt",
-            "broadcast_name": "SmartTrolley_Bill",
-            "receivers": [
-                {
-                    "whatsappNumber": f"91{phone}",
-                    "customParams": [
-                        {"name": "1", "value": str(trolley or "T-0000")},
-                        {"name": "2", "value": str(phone)},
-                        {"name": "3", "value": str(date_str)},
-                        {"name": "4", "value": str(items_text)},
-                        {"name": "5", "value": str(total)},
-                        {"name": "6", "value": str(payment_id or "N/A")}
-                    ]
-                }
-            ]
-        }
-        r1 = req.post(url1, json=payload1, headers=headers1, timeout=10)
-        print(f"Wati template: {r1.status_code} {r1.text[:300]}")
-        if r1.status_code == 200:
-            try:
-                result = r1.json()
-                if result.get('result') == True:
-                    print("Wati template sent successfully!")
-                    return True
-            except:
-                pass
+       # Method 1 — approved template (whatsappNumber as QUERY PARAM)
+for num_format in [f"91{phone}", phone]:
+    url = f"{base}/api/v1/sendTemplateMessage?whatsappNumber={num_format}"
+    payload = {
+        "template_name": "smart_trolley_bill_receipt",
+        "broadcast_name": "SmartTrolley_Bill",
+        "parameters": [
+            {"name": "1", "value": str(trolley or "T-0000")},
+            {"name": "2", "value": str(phone)},
+            {"name": "3", "value": str(date_str)},
+            {"name": "4", "value": str(items_text)},
+            {"name": "5", "value": str(total)},
+            {"name": "6", "value": str(payment_id or "N/A")}
+        ]
+    }
+    r = req.post(url, json=payload, headers=headers, timeout=10)
+    print(f"Wati template [{num_format}]: {r.status_code} {r.text[:300]}")
+    try:
+        result = r.json()
+        if result.get('result') == True:
+            print(f"Wati SUCCESS with: {num_format}")
+            return True
+    except:
+        pass
 
         # Method 2 — session message
         headers2 = {
