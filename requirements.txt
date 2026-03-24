@@ -5,6 +5,5 @@ opencv-python-headless
 numpy
 gunicorn
 requests
-twilio
-razorpay
 reportlab
+razorpay
