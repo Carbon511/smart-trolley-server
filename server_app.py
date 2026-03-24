@@ -7,6 +7,8 @@ import hashlib
 import hmac
 from datetime import datetime
 from logger import log_purchase, read_logs
+import time as _time
+from collections import defaultdict
 
 app = Flask(__name__)
 
@@ -290,6 +292,257 @@ def owner_dashboard():
     logs = read_logs()
     logs = list(reversed(logs))
     return render_template('owner.html', logs=logs, products=PRODUCTS)
+
+# Per-trolley sensor state (lives in memory on Render)
+trolley_state = defaultdict(lambda: {
+    'weight'         : 0.0,
+    'prev_weight'    : 0.0,
+    'baseline_weight': 0.0,
+    'detections'     : [],
+    'cart'           : [],
+    'total'          : 0.0,
+    'payment_mode'   : False,
+    'fraud_alert'    : None,
+    'theft_alert'    : None,
+    'last_activity'  : _time.time(),
+    'arduino_ok'     : False,
+    'camera_ok'      : False,
+    'fps'            : 0.0,
+    'last_seen'      : 0,
+    'cooldowns'      : {},
+})
+ 
+# Settings
+WEIGHT_THRESHOLD   = 20      # grams — minimum change to count
+WEIGHT_TOLERANCE   = 0.35    # 35% tolerance for weight-name matching
+DETECTION_COOLDOWN = 5       # seconds before same item can be re-added
+SESSION_TIMEOUT    = 600     # 10 min idle resets cart
+ALERT_CLEAR_TIME   = 30      # auto-clear alerts after 30s
+ 
+# Product prices (same as your products.py)
+FUSION_PRICES = {
+    'Book Record'      : 50.0,
+    'Brustro Pencils'  : 120.0,
+    'Dr wash 190g'     : 45.0,
+    'Fresh& Fruity'    : 30.0,
+    'Garnier Men'      : 199.0,
+    'Globe  Cream'     : 85.0,
+    'Maggi 140g'       : 25.0,
+    'Maggi 280g'       : 50.0,
+    'Soudal paint'     : 250.0,
+    'Sprite 1L'        : 60.0,
+    'Sprite 400ml'     : 30.0,
+    'iva Liquid 500ml' : 99.0,
+    'krackjack 120g'   : 20.0,
+    'krackjack 180g'   : 30.0,
+}
+ 
+# Expected weights in grams
+FUSION_WEIGHTS = {
+    'Book Record'      : 300,
+    'Brustro Pencils'  : 150,
+    'Dr wash 190g'     : 210,
+    'Fresh& Fruity'    : 100,
+    'Garnier Men'      : 120,
+    'Globe  Cream'     : 80,
+    'Maggi 140g'       : 155,
+    'Maggi 280g'       : 300,
+    'Soudal paint'     : 400,
+    'Sprite 1L'        : 1050,
+    'Sprite 400ml'     : 420,
+    'iva Liquid 500ml' : 520,
+    'krackjack 120g'   : 135,
+    'krackjack 180g'   : 195,
+}
+ 
+ 
+def best_weight_match(delta, detections):
+    """Find the detected item whose expected weight is closest to delta."""
+    for det in detections:
+        expected = FUSION_WEIGHTS.get(det['name'], 0)
+        if expected > 0 and abs(delta - expected) <= expected * WEIGHT_TOLERANCE:
+            return det['name']
+    return None
+ 
+ 
+def find_removed(delta, cart):
+    """Find the cart item whose weight matches a removal delta."""
+    for item in reversed(cart):
+        expected = FUSION_WEIGHTS.get(item['name'], 0)
+        if expected > 0 and abs(delta - expected) <= expected * WEIGHT_TOLERANCE:
+            return item['name']
+    return None
+ 
+ 
+@app.route('/pi/sensor_data', methods=['POST'])
+def sensor_data():
+    """
+    Receives sensor data from the Pi every 0.5s.
+    Payload:
+      {
+        trolley_id  : str,
+        weight      : float,   # current grams from Arduino
+        detections  : [...],   # YOLO results
+        arduino_ok  : bool,
+        camera_ok   : bool,
+        fps         : float,
+        timestamp   : float,
+      }
+    """
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'no data'}), 400
+ 
+    tid  = data.get('trolley_id', 'trolley_01')
+    ts   = _time.time()
+    s    = trolley_state[tid]
+ 
+    # Update hardware status
+    s['arduino_ok']  = data.get('arduino_ok', False)
+    s['camera_ok']   = data.get('camera_ok', False)
+    s['fps']         = data.get('fps', 0.0)
+    s['detections']  = data.get('detections', [])
+    s['last_seen']   = ts
+ 
+    new_weight = float(data.get('weight', 0.0))
+    s['prev_weight'] = s['weight']
+    s['weight']      = new_weight
+ 
+    delta = new_weight - s['baseline_weight']
+ 
+    # --- Weight up: item added ---
+    if delta > WEIGHT_THRESHOLD:
+        dets = s['detections']
+        name = best_weight_match(delta, dets)
+        if not name and dets:
+            # fallback: highest confidence detection
+            name = max(dets, key=lambda d: d['conf'])['name']
+ 
+        if not name:
+            # Nothing detected — possible theft
+            s['theft_alert'] = {
+                'message'  : f"Unknown item added! Weight +{delta:.0f}g, nothing detected.",
+                'timestamp': ts,
+                'delta'    : delta,
+            }
+        else:
+            now = ts
+            cooldowns = s['cooldowns']
+            if now - cooldowns.get(name, 0) >= DETECTION_COOLDOWN:
+                if s['payment_mode']:
+                    s['fraud_alert'] = {
+                        'type'     : 'added',
+                        'name'     : name,
+                        'message'  : f"Item added during payment: {name}",
+                        'timestamp': ts,
+                    }
+                    s['payment_mode'] = False
+                else:
+                    price = FUSION_PRICES.get(name, 0.0)
+                    item  = {
+                        'id'       : f"{name}_{int(ts)}",
+                        'name'     : name,
+                        'price'    : price,
+                        'weight_g' : round(delta, 1),
+                        'timestamp': ts,
+                    }
+                    s['cart'].append(item)
+                    s['total']          = round(s['total'] + price, 2)
+                    s['baseline_weight'] = new_weight
+                    s['last_activity']  = ts
+                    cooldowns[name]     = ts
+ 
+    # --- Weight down: item removed ---
+    elif delta < -WEIGHT_THRESHOLD:
+        removed_delta = abs(delta)
+        if s['payment_mode']:
+            s['fraud_alert'] = {
+                'type'     : 'removed',
+                'message'  : f"Item removed during payment! Weight -{removed_delta:.0f}g",
+                'timestamp': ts,
+            }
+            s['payment_mode'] = False
+        else:
+            name = find_removed(removed_delta, s['cart'])
+            if name:
+                for i, item in enumerate(s['cart']):
+                    if item['name'] == name:
+                        removed = s['cart'].pop(i)
+                        s['total']           = round(s['total'] - removed['price'], 2)
+                        s['baseline_weight'] = new_weight
+                        s['last_activity']   = ts
+                        break
+            else:
+                s['baseline_weight'] = new_weight
+ 
+    # --- Session timeout ---
+    if s['cart'] and not s['payment_mode'] and ts - s['last_activity'] > SESSION_TIMEOUT:
+        s['cart']  = []
+        s['total'] = 0.0
+        s['baseline_weight'] = new_weight
+ 
+    # --- Auto-clear old alerts ---
+    for key in ('theft_alert', 'fraud_alert'):
+        alert = s[key]
+        if alert and ts - alert['timestamp'] > ALERT_CLEAR_TIME:
+            s[key] = None
+ 
+    return jsonify({'status': 'ok', 'cart_count': len(s['cart']), 'total': s['total']})
+ 
+ 
+@app.route('/pi/trolley_status/<trolley_id>')
+def trolley_status(trolley_id):
+    """Dashboard polls this to get cart + alerts."""
+    s = trolley_state[trolley_id]
+    return jsonify({
+        'trolley_id'     : trolley_id,
+        'cart'           : s['cart'],
+        'total'          : s['total'],
+        'items_count'    : len(s['cart']),
+        'payment_mode'   : s['payment_mode'],
+        'fraud_alert'    : s['fraud_alert'],
+        'theft_alert'    : s['theft_alert'],
+        'weight_current' : s['weight'],
+        'weight_baseline': s['baseline_weight'],
+        'weight_delta'   : round(s['weight'] - s['baseline_weight'], 1),
+        'detections'     : s['detections'],
+        'arduino_ok'     : s['arduino_ok'],
+        'camera_ok'      : s['camera_ok'],
+        'fps'            : s['fps'],
+        'online'         : (_time.time() - s['last_seen']) < 10,
+    })
+ 
+ 
+@app.route('/pi/set_payment_mode', methods=['POST'])
+def pi_set_payment_mode():
+    data = request.get_json(silent=True) or {}
+    tid  = data.get('trolley_id', 'trolley_01')
+    trolley_state[tid]['payment_mode']  = True
+    trolley_state[tid]['last_activity'] = _time.time()
+    return jsonify({'status': 'ok'})
+ 
+ 
+@app.route('/pi/tare', methods=['POST'])
+def pi_tare():
+    data = request.get_json(silent=True) or {}
+    tid  = data.get('trolley_id', 'trolley_01')
+    trolley_state[tid]['baseline_weight'] = trolley_state[tid]['weight']
+    return jsonify({'status': 'ok', 'baseline': trolley_state[tid]['baseline_weight']})
+ 
+ 
+@app.route('/pi/clear_cart', methods=['POST'])
+def pi_clear_cart():
+    data = request.get_json(silent=True) or {}
+    tid  = data.get('trolley_id', 'trolley_01')
+    s    = trolley_state[tid]
+    s['cart']          = []
+    s['total']         = 0.0
+    s['payment_mode']  = False
+    s['fraud_alert']   = None
+    s['theft_alert']   = None
+    s['cooldowns']     = {}
+    s['baseline_weight'] = s['weight']
+    return jsonify({'status': 'ok'})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
