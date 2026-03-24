@@ -2,8 +2,10 @@ services:
   - type: web
     name: smart-trolley
     runtime: python
+    # This installs your AI libraries and Flask
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn server_app:app --bind 0.0.0.0:10000 --workers 1 --timeout 120
+    # We use 1 worker to save RAM and ensure the Cart data stays in sync
+    startCommand: gunicorn server_app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
     envVars:
-      - key: PORT
-        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.10.0
