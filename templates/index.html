@@ -32,6 +32,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 @keyframes countdown{from{width:100%}to{width:0%}}
 @keyframes bounce{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(26,107,74,0.4)}70%{box-shadow:0 0 0 8px rgba(26,107,74,0)}}
 
 /* STARTUP */
 #startup{flex-direction:column;align-items:center;justify-content:center;background:var(--surface);position:relative;overflow:hidden;}
@@ -85,6 +86,8 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .ldot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.5s ease-in-out infinite;}
 .tr{display:flex;align-items:center;gap:10px;}
 .chip{display:flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--border);border-radius:50px;padding:5px 13px;font-size:12px;color:var(--t2);font-weight:500;}
+.chip.pi-online{background:var(--gl);border-color:rgba(26,107,74,0.3);color:var(--green);}
+.chip.pi-offline{background:var(--rl);border-color:rgba(192,57,43,0.3);color:var(--red);}
 .av{width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;}
 .dbody{display:grid;grid-template-columns:1fr 350px;height:calc(100vh - 56px);overflow:hidden;}
 .left{padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
@@ -94,23 +97,31 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .ct{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--t2);}
 .blv{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--green);}
 .bdot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.5s ease-in-out infinite;}
-.camw{width:100%;height:240px;background:#111;position:relative;overflow:hidden;}
-.camw img{width:100%;height:100%;object-fit:cover;}
-.camp{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#666;}
+
+/* Camera */
+.camw{width:100%;height:260px;background:#111;position:relative;overflow:hidden;}
+.camw img{width:100%;height:100%;object-fit:cover;display:block;}
+.camp{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#666;background:#111;}
 .camp span:first-child{font-size:36px;opacity:0.3;}
 .camp span:last-child{font-size:11px;font-family:monospace;background:rgba(255,255,255,0.07);padding:5px 10px;border-radius:6px;color:#888;}
+/* Live badge on camera */
+.cam-live-badge{position:absolute;top:10px;left:10px;background:rgba(26,107,74,0.9);color:#fff;font-size:10px;font-weight:700;letter-spacing:1px;padding:4px 10px;border-radius:50px;display:none;align-items:center;gap:5px;z-index:10;}
+.cam-live-badge .blink{width:5px;height:5px;border-radius:50%;background:#4eff9a;animation:blink 1s ease-in-out infinite;}
+/* Detections overlay on camera */
+.det-overlay{position:absolute;bottom:10px;left:10px;right:10px;display:flex;flex-wrap:wrap;gap:4px;z-index:10;pointer-events:none;}
+.det-tag{background:rgba(26,107,74,0.85);color:#fff;font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;backdrop-filter:blur(4px);}
 .det-popup{position:absolute;top:12px;right:12px;max-width:190px;border-radius:12px;padding:10px 14px;display:none;z-index:20;flex-direction:column;gap:2px;}
 .det-popup.add{background:rgba(26,107,74,0.93);color:#fff;border:2px solid #2dcc7a;box-shadow:0 4px 20px rgba(26,107,74,0.4);}
 .det-popup.remove{background:rgba(192,57,43,0.93);color:#fff;border:2px solid #e74c3c;box-shadow:0 4px 20px rgba(192,57,43,0.4);top:auto;bottom:12px;}
-.dp-icon{font-size:20px;margin-bottom:2px;}
-.dp-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:0.8;}
-.dp-name{font-size:13px;font-weight:600;}
-.dp-price{font-size:12px;opacity:0.85;}
+.dp-icon{font-size:20px;margin-bottom:2px;}.dp-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:0.8;}
+.dp-name{font-size:13px;font-weight:600;}.dp-price{font-size:12px;opacity:0.85;}
 .cstats{display:flex;padding:10px 16px;}
 .cst{flex:1;display:flex;flex-direction:column;gap:1px;padding:0 10px;border-right:1px solid var(--border);}
 .cst:first-child{padding-left:0;}.cst:last-child{border:none;}
 .csl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);}
 .csv{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--t);}
+
+/* Weight */
 .wcard{padding:16px;display:flex;align-items:center;gap:16px;}
 .wl{flex:1;}.wr{flex:2;}
 .wlab{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:3px;}
@@ -123,6 +134,8 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .wsc.added{background:var(--gl);color:var(--green);}
 .wsc.removed{background:var(--rl);color:var(--red);}
 .wsc.stable{background:var(--bg2);color:var(--t3);}
+
+/* Nutrition */
 .np{padding:16px;display:none;flex-direction:column;gap:12px;}
 .np.visible{display:flex;}
 .nh{display:flex;align-items:center;gap:10px;}
@@ -140,9 +153,17 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .ctop{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .chead{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;}
 .cbadge{background:var(--green);color:#fff;font-size:11px;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
-.fraud-top{display:none;margin:8px;background:var(--rl);border:1.5px solid var(--red);border-radius:12px;padding:12px 16px;align-items:center;gap:10px;}
-.fraud-top.active{display:flex;}
-.ft-icon{font-size:20px;}.ft-text{flex:1;font-size:13px;font-weight:600;color:var(--red);line-height:1.4;}
+
+/* Theft / fraud alert banners */
+.alert-banner{display:none;margin:8px;border-radius:12px;padding:12px 16px;align-items:center;gap:10px;}
+.alert-banner.active{display:flex;}
+.alert-banner.fraud{background:var(--rl);border:1.5px solid var(--red);}
+.alert-banner.theft{background:#fff3cd;border:1.5px solid var(--amber);}
+.ab-icon{font-size:20px;}.ab-text{flex:1;font-size:13px;font-weight:600;line-height:1.4;}
+.ab-text.red{color:var(--red);}.ab-text.amber{color:var(--amber);}
+.ab-close{background:none;border:none;font-size:16px;cursor:pointer;opacity:0.5;padding:2px 6px;}
+.ab-close:hover{opacity:1;}
+
 .clist{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:5px;}
 .clist::-webkit-scrollbar{width:3px;}
 .clist::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
@@ -152,6 +173,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .crow:hover{border-color:var(--green);background:var(--gl);}
 .re{font-size:20px;}.ri{flex:1;}
 .rn{font-size:13px;font-weight:500;}.rp{font-size:12px;color:var(--green);font-weight:600;}
+.rw{font-size:10px;color:var(--t3);margin-top:1px;}
 .rrm{width:24px;height:24px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--t3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;transition:all 0.2s;}
 .rrm:hover{background:var(--rl);color:var(--red);border-color:var(--red);}
 .cbot{padding:14px 18px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px;background:var(--surface2);}
@@ -188,8 +210,6 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .bp-tl{font-size:14px;color:var(--t2);}
 .bp-tn{font-family:'Playfair Display',serif;font-size:32px;font-weight:900;color:var(--green);}
 .bp-txn{font-size:11px;color:var(--t3);margin-top:4px;font-family:monospace;}
-
-/* WhatsApp status on bill page */
 .wa-status{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 20px;box-shadow:var(--sh);margin-bottom:12px;display:flex;align-items:center;gap:12px;}
 .wa-status-icon{font-size:28px;}
 .wa-status-text{flex:1;}
@@ -197,7 +217,6 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 .wa-status-sub{font-size:12px;color:var(--t3);margin-top:2px;}
 .wa-resend{background:#25D366;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;flex-shrink:0;}
 .wa-resend:hover{background:#1da851;}
-
 .done-btn{width:100%;background:var(--green);color:#fff;border:none;padding:16px;border-radius:11px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.25s;box-shadow:0 4px 18px rgba(26,107,74,0.2);}
 .done-btn:hover{background:var(--gd);}
 
@@ -261,17 +280,37 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
   <div class="topbar">
     <div class="tlogo">SmartTrolley<div class="ldot"></div></div>
     <div class="tr">
+      <div class="chip" id="piStatusChip">🔴 Pi Offline</div>
       <div class="chip">🛒 <span id="topTrolleyId">T-0000</span></div>
       <div class="chip"><div class="av" id="userInit">G</div><span id="topPhone">Guest</span></div>
     </div>
   </div>
   <div class="dbody">
+    <!-- LEFT PANEL -->
     <div class="left">
+
+      <!-- Camera Card -->
       <div class="card">
-        <div class="ch"><span class="ct">Live Detection</span><span class="blv"><span class="bdot"></span>Active</span></div>
+        <div class="ch">
+          <span class="ct">Live Detection</span>
+          <span class="blv" id="detStatusLabel"><span class="bdot"></span>Active</span>
+        </div>
         <div class="camw">
-          <img id="camFeed" src="" style="display:none" onerror="this.style.display='none'">
-          <div class="camp" id="camPlaceholder"><span>📷</span><span>Pi camera feed</span></div>
+          <!-- Pi video stream — always pointed at server relay -->
+          <img id="camFeed"
+               src="/pi/video_feed/trolley_01"
+               style="display:none"
+               onerror="onCamError()"
+               onload="onCamLoad()">
+          <div class="camp" id="camPlaceholder">
+            <span>📷</span>
+            <span id="camPlaceholderText">Connecting to Pi camera...</span>
+          </div>
+          <div class="cam-live-badge" id="camLiveBadge">
+            <span class="blink"></span>LIVE
+          </div>
+          <!-- Real-time detection tags overlay -->
+          <div class="det-overlay" id="detOverlay"></div>
           <div class="det-popup add" id="addPopup">
             <div class="dp-icon" id="addIcon">📦</div>
             <div class="dp-label">✅ Item Added</div>
@@ -292,28 +331,57 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
           <div class="cst"><span class="csl">Status</span><span class="csv" id="detStatus" style="font-size:12px;color:var(--green)">Scanning</span></div>
         </div>
       </div>
+
+      <!-- Weight Card -->
       <div class="card">
-        <div class="ch"><span class="ct">Weight Sensor</span><span class="blv" style="color:var(--amber)"><span class="bdot" style="background:var(--amber)"></span>HX711</span></div>
+        <div class="ch">
+          <span class="ct">Weight Sensor</span>
+          <span class="blv" style="color:var(--amber)"><span class="bdot" style="background:var(--amber)"></span><span id="arduinoLabel">HX711</span></span>
+        </div>
         <div class="wcard">
-          <div class="wl"><div class="wlab">Weight</div><div class="wnum" id="weightNum">0<span class="wu">g</span></div></div>
+          <div class="wl">
+            <div class="wlab">Weight</div>
+            <div class="wnum" id="weightNum">0<span class="wu">g</span></div>
+          </div>
           <div class="wr">
             <div class="wbb"><div class="wbf" id="wbarFill"></div></div>
-            <div class="wsr"><span class="wsc stable" id="wstatChip">Stable</span><span id="wdeltaText" style="font-size:12px;color:var(--t3)">Place items in trolley</span></div>
+            <div class="wsr">
+              <span class="wsc stable" id="wstatChip">Stable</span>
+              <span id="wdeltaText" style="font-size:12px;color:var(--t3)">Place items in trolley</span>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Nutrition Card -->
       <div class="card">
         <div class="ch"><span class="ct">Nutrition Info</span><span style="font-size:12px;color:var(--t3)" id="nutLabel">Last scanned</span></div>
         <div class="np" id="nutritionPanel"></div>
         <div style="padding:20px;text-align:center;color:var(--t3);font-size:13px" id="nutritionEmpty">Scan a product to see details</div>
       </div>
     </div>
+
+    <!-- RIGHT PANEL: CART -->
     <div class="right">
-      <div class="ctop"><span class="chead">Cart</span><span class="cbadge" id="cartBadge">0</span></div>
-      <div class="fraud-top" id="fraudBanner">
-        <span class="ft-icon">🚨</span>
-        <span class="ft-text" id="fraudText">Cart changed during payment! Total recalculated.</span>
+      <div class="ctop">
+        <span class="chead">Cart</span>
+        <span class="cbadge" id="cartBadge">0</span>
       </div>
+
+      <!-- Fraud alert banner -->
+      <div class="alert-banner fraud" id="fraudBanner">
+        <span class="ab-icon">🚨</span>
+        <span class="ab-text red" id="fraudText">Cart changed during payment! Total recalculated.</span>
+        <button class="ab-close" onclick="closeBanner('fraudBanner')">✕</button>
+      </div>
+
+      <!-- Theft alert banner -->
+      <div class="alert-banner theft" id="theftBanner">
+        <span class="ab-icon">⚠️</span>
+        <span class="ab-text amber" id="theftText">Unknown weight change detected!</span>
+        <button class="ab-close" onclick="closeBanner('theftBanner')">✕</button>
+      </div>
+
       <div class="clist" id="cartList">
         <div class="empty"><span class="ei">🛒</span><span>Cart is empty</span><span style="font-size:12px">Point camera at products</span></div>
       </div>
@@ -350,17 +418,14 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
         <span class="bp-tn" id="bpTotal">₹0</span>
       </div>
     </div>
-
-    <!-- WhatsApp status — fully automatic -->
     <div class="wa-status">
       <span class="wa-status-icon" id="waStatusIcon">📤</span>
       <div class="wa-status-text">
         <div class="wa-status-title" id="waStatusTitle">Sending bill to WhatsApp...</div>
-        <div class="wa-status-sub" id="waStatusSub">+91 <span id="waStatusPhone">—</span></div>
+        <div class="wa-status-sub">+91 <span id="waStatusPhone">—</span></div>
       </div>
       <button class="wa-resend" id="waResendBtn" onclick="resendBill()" style="display:none">Resend</button>
     </div>
-
     <button class="done-btn" onclick="doneBill()">✓ &nbsp; Done — Verified Receipt</button>
   </div>
 </div>
@@ -378,20 +443,32 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 <div class="toast" id="toast"></div>
 
 <script>
-const RENDER_URL = "https://smart-trolley-owlx.onrender.com";
-const RZP_KEY_ID = "rzp_live_SULbMnyyuHNunP";
+// ─────────────────────────────────────────────────────
+//  CONFIG
+// ─────────────────────────────────────────────────────
+const RENDER_URL  = "";          // same origin — blank = relative URLs
+const PI_TROLLEY  = "trolley_01";  // must match Pi's TROLLEY_ID
+const RZP_KEY_ID  = "rzp_live_SULbMnyyuHNunP";
+const POLL_MS     = 1500;         // poll trolley_status every 1.5s
 
-let cart=[],totalDetected=0,currentPhone="",trolleyNum="";
-let pollTimer=null,weightTimer=null,demoTimer=null;
-let lastWeight=0,piConnected=false,demoIdx=0,lastServerCount=0;
-let onPaymentPage=false,paidTotal=0,paymentId="",orderId="";
-let addPopTimer=null,removePopTimer=null;
+// ─────────────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────────────
+let currentPhone = "", trolleyNum = "";
+let pollTimer = null;
+let piOnline = false, piWasOnline = false;
+let serverCart = [];          // source of truth from server
+let prevCartLen = 0;
+let lastWeight = 0, weightStableTimer = null;
+let onPaymentPage = false, paidTotal = 0, paymentId = "", orderId = "";
+let addPopTimer = null, removePopTimer = null;
+let prevFraudAlert = null, prevTheftAlert = null;
+let camRetryTimer = null;
 
-const DEMO=[
-  {name:"Sprite 400ml",price:30},{name:"Maggi 140g",price:25},
-  {name:"krackjack 120g",price:20},{name:"Garnier Men",price:199},{name:"Globe Cream",price:85}
-];
-const NUT={
+// ─────────────────────────────────────────────────────
+//  PRODUCT DATA
+// ─────────────────────────────────────────────────────
+const NUT = {
   "Book Record":      {cal:0,carbs:0,protein:0,fat:0,tags:["Stationery"],al:[]},
   "Brustro Pencils":  {cal:0,carbs:0,protein:0,fat:0,tags:["Art Supply"],al:[]},
   "Garnier Men":      {cal:0,carbs:0,protein:0,fat:0,tags:["Skincare","Paraben-Free"],al:["Fragrance"]},
@@ -403,15 +480,21 @@ const NUT={
   "Maggi 280g":       {cal:385,carbs:55,protein:9,fat:14,tags:["Noodles","Gluten"],al:["Wheat"]},
   "iva Liquid 500ml": {cal:0,carbs:0,protein:0,fat:0,tags:["Detergent","Non-edible"],al:[]},
   "Globe Cream":      {cal:0,carbs:0,protein:0,fat:0,tags:["Skincare"],al:["Fragrance"]},
-  "Soudal paint":     {cal:0,carbs:0,protein:0,fat:0,tags:["Hardware","Non-edible"],al:[]}
+  "Soudal paint":     {cal:0,carbs:0,protein:0,fat:0,tags:["Hardware","Non-edible"],al:[]},
+  "Dr wash 190g":     {cal:0,carbs:0,protein:0,fat:0,tags:["Detergent","Non-edible"],al:[]},
+  "Fresh& Fruity":    {cal:0,carbs:0,protein:0,fat:0,tags:["Cosmetic"],al:["Fragrance"]},
 };
-const EM={
+const EM = {
   "Book Record":"📒","Brustro Pencils":"✏️","Garnier Men":"🧴",
   "krackjack 120g":"🍪","krackjack 180g":"🍪","Sprite 1L":"🥤",
   "Sprite 400ml":"🥤","Maggi 140g":"🍜","Maggi 280g":"🍜",
-  "iva Liquid 500ml":"🧼","Globe Cream":"🧴","Soudal paint":"🎨"
+  "iva Liquid 500ml":"🧼","Globe Cream":"🧴","Soudal paint":"🎨",
+  "Dr wash 190g":"🧹","Fresh& Fruity":"🍓",
 };
 
+// ─────────────────────────────────────────────────────
+//  NAVIGATION
+// ─────────────────────────────────────────────────────
 function goTo(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -424,7 +507,13 @@ function showProcessing(t,s){
 function hideProcessing(){
   document.getElementById('processingOverlay').classList.remove('active');
 }
+function closeBanner(id){
+  document.getElementById(id).classList.remove('active');
+}
 
+// ─────────────────────────────────────────────────────
+//  QR / LOGIN
+// ─────────────────────────────────────────────────────
 function makeQR(boxId,text,size){
   const el=document.getElementById(boxId);
   el.innerHTML='';
@@ -434,10 +523,8 @@ function generateTrolleyQR(){
   const id=Math.floor(1000+Math.random()*9000);
   trolleyNum="T-"+id;
   document.getElementById('trolleyId').textContent=trolleyNum;
-  makeQR('loginQRBox',`${RENDER_URL}/?trolley=${trolleyNum}`,160);
+  makeQR('loginQRBox',`${window.location.origin}/?trolley=${trolleyNum}`,160);
 }
-
-// ── LOGIN — button click only, no auto proceed ──
 function onPhoneInput(val){
   const btn=document.getElementById('loginBtn');
   const hint=document.getElementById('phoneHint');
@@ -455,7 +542,6 @@ function onPhoneInput(val){
     hint.style.color='var(--t3)';
   }
 }
-
 function doLogin(){
   const ph=document.getElementById('loginPhone').value.trim();
   if(ph.length!==10){toast("⚠️ Enter full 10-digit number");return;}
@@ -463,73 +549,192 @@ function doLogin(){
   document.getElementById('topTrolleyId').textContent=trolleyNum;
   document.getElementById('topPhone').textContent='+91 '+currentPhone;
   document.getElementById('userInit').textContent=currentPhone[0];
-  document.getElementById('fraudBanner').classList.remove('active');
+  closeBanner('fraudBanner');closeBanner('theftBanner');
   goTo('dashboard');
-  simFPS();startWeightSim();startPolling();startDemo();
+  startCameraFeed();
+  startPolling();
   toast("✅ Welcome! Bill will be sent to +91"+currentPhone+" after payment");
 }
 
-// ── POLLING ──
+// ─────────────────────────────────────────────────────
+//  CAMERA FEED  — streamed from render server
+// ─────────────────────────────────────────────────────
+function startCameraFeed(){
+  const img = document.getElementById('camFeed');
+  // Force a fresh stream URL with cache-buster so browser reconnects
+  img.src = `/pi/video_feed/${PI_TROLLEY}?t=${Date.now()}`;
+  img.style.display = 'block';
+}
+
+function onCamLoad(){
+  // Called when the img starts receiving data
+  document.getElementById('camPlaceholder').style.display = 'none';
+  document.getElementById('camLiveBadge').style.display = 'flex';
+  if(camRetryTimer){clearTimeout(camRetryTimer);camRetryTimer=null;}
+}
+
+function onCamError(){
+  // Pi offline — show placeholder, retry in 5s
+  document.getElementById('camPlaceholder').style.display = 'flex';
+  document.getElementById('camPlaceholderText').textContent = 'Pi camera offline — retrying...';
+  document.getElementById('camLiveBadge').style.display = 'none';
+  if(!camRetryTimer){
+    camRetryTimer = setTimeout(()=>{
+      camRetryTimer=null;
+      startCameraFeed();
+    }, 5000);
+  }
+}
+
+// ─────────────────────────────────────────────────────
+//  MAIN POLL — /pi/trolley_status/:id  every 1.5s
+// ─────────────────────────────────────────────────────
 function startPolling(){
   if(pollTimer)clearInterval(pollTimer);
-  pollTimer=setInterval(async()=>{
-    try{
-      const r=await fetch(`${RENDER_URL}/cart`);
-      const d=await r.json();
-      const si=d.items||[];
-      if(si.length>lastServerCount){
-        if(!piConnected){
-          piConnected=true;
-          if(demoTimer)clearInterval(demoTimer);
-          cart=[];renderCart();
-          toast("📡 Pi connected! Live detection active.");
-        }
-        for(let i=lastServerCount;i<si.length;i++){
-          if(onPaymentPage){cartChangedDuringPayment("Item added during payment");}
-          else{cart.push(si[i]);showAddPopup(si[i]);}
-        }
-        if(!onPaymentPage)renderCart();
-      }
-      if(piConnected&&si.length<lastServerCount){
-        if(onPaymentPage){cartChangedDuringPayment("Item removed during payment");}
-        else{
-          const removed=cart[lastServerCount-1]||{name:'Item',price:0};
-          cart=si;showRemovePopup(removed);renderCart();
-        }
-      }
-      lastServerCount=si.length;
-      if(d.weight&&d.weight>0&&piConnected)updateWeight(d.weight);
-    }catch{}
-  },2000);
+  pollTimer = setInterval(pollStatus, POLL_MS);
+  pollStatus(); // immediate first call
 }
 
-// ── FRAUD ──
-function cartChangedDuringPayment(reason){
-  onPaymentPage=false;hideProcessing();
+async function pollStatus(){
+  try{
+    const r = await fetch(`/pi/trolley_status/${PI_TROLLEY}`);
+    if(!r.ok)return;
+    const d = await r.json();
+
+    // ── Online / offline ──────────────────────────────
+    piOnline = d.online;
+    const chip = document.getElementById('piStatusChip');
+    if(piOnline){
+      chip.textContent = '🟢 Pi Online';
+      chip.className = 'chip pi-online';
+      if(!piWasOnline){
+        toast("📡 Pi connected — Live detection active!");
+        piWasOnline = true;
+      }
+    } else {
+      chip.textContent = '🔴 Pi Offline';
+      chip.className = 'chip pi-offline';
+      piWasOnline = false;
+    }
+
+    // ── Hardware status ───────────────────────────────
+    document.getElementById('arduinoLabel').textContent =
+      d.arduino_ok ? 'HX711 ✓' : 'HX711 ✗';
+    document.getElementById('fpsStat').textContent =
+      d.fps ? d.fps.toFixed(1) : '—';
+
+    // ── Live detections overlay ───────────────────────
+    updateDetectionsOverlay(d.detections || []);
+
+    // ── Weight ────────────────────────────────────────
+    if(typeof d.weight_current === 'number'){
+      updateWeight(d.weight_current);
+    }
+
+    // ── Alerts ───────────────────────────────────────
+    handleAlerts(d);
+
+    // ── Cart sync ─────────────────────────────────────
+    const newCart = d.cart || [];
+    syncCart(newCart, d.total || 0);
+
+  }catch(e){
+    // server error — don't crash
+  }
+}
+
+// ─────────────────────────────────────────────────────
+//  CART SYNC  — compare server cart to local
+// ─────────────────────────────────────────────────────
+function syncCart(newCart, serverTotal){
+  const newLen = newCart.length;
+  const oldLen = serverCart.length;
+
+  if(newLen > oldLen){
+    // Items added
+    for(let i = oldLen; i < newLen; i++){
+      const item = newCart[i];
+      if(onPaymentPage){
+        handlePaymentFraud("Item added during payment");
+      } else {
+        showAddPopup(item);
+      }
+    }
+  } else if(newLen < oldLen){
+    // Items removed
+    if(onPaymentPage){
+      handlePaymentFraud("Item removed during payment");
+    } else {
+      // Find what was removed
+      const removed = serverCart.find(old=>!newCart.find(n=>n.id===old.id));
+      if(removed) showRemovePopup(removed);
+    }
+  }
+
+  serverCart = newCart;
+  if(!onPaymentPage){
+    renderCart(serverTotal);
+  }
+}
+
+// ─────────────────────────────────────────────────────
+//  ALERTS
+// ─────────────────────────────────────────────────────
+function handleAlerts(d){
+  // Fraud alert (item added/removed during payment)
+  if(d.fraud_alert && d.fraud_alert !== prevFraudAlert){
+    prevFraudAlert = d.fraud_alert;
+    document.getElementById('fraudText').textContent = d.fraud_alert.message;
+    document.getElementById('fraudBanner').classList.add('active');
+    toast('🚨 ' + d.fraud_alert.message);
+  }
+  if(!d.fraud_alert) prevFraudAlert = null;
+
+  // Theft alert (unknown weight change)
+  if(d.theft_alert && d.theft_alert !== prevTheftAlert){
+    prevTheftAlert = d.theft_alert;
+    document.getElementById('theftText').textContent = d.theft_alert.message;
+    document.getElementById('theftBanner').classList.add('active');
+    toast('⚠️ ' + d.theft_alert.message);
+  }
+  if(!d.theft_alert) prevTheftAlert = null;
+}
+
+function handlePaymentFraud(reason){
+  onPaymentPage = false;
+  hideProcessing();
   goTo('dashboard');
+  document.getElementById('fraudText').textContent = `🚨 ${reason}! Total recalculated — please pay again.`;
   document.getElementById('fraudBanner').classList.add('active');
-  document.getElementById('fraudText').textContent=`🚨 ${reason}! Total recalculated — please pay again.`;
-  toast("🚨 Cart changed! Please review and pay again.");
+  toast("🚨 Cart changed during payment!");
 }
 
-// ── DEMO ──
-function startDemo(){
-  if(demoTimer)clearInterval(demoTimer);
-  setTimeout(()=>{if(!piConnected&&!onPaymentPage)addDemo();},10000);
-  demoTimer=setInterval(()=>{if(!piConnected&&!onPaymentPage)addDemo();},20000);
-}
-function addDemo(){
-  if(piConnected||onPaymentPage)return;
-  const item=DEMO[demoIdx%DEMO.length];demoIdx++;
-  cart.push(item);showAddPopup(item);renderCart();
+// ─────────────────────────────────────────────────────
+//  DETECTIONS OVERLAY  (live bboxes summary)
+// ─────────────────────────────────────────────────────
+function updateDetectionsOverlay(detections){
+  const overlay = document.getElementById('detOverlay');
+  if(!detections.length){
+    overlay.innerHTML='';
+    document.getElementById('detCount').textContent = '0';
+    document.getElementById('confStat').textContent = '—';
+    return;
+  }
+  // Show top 4 detections as tags
+  const top = detections.slice(0,4);
+  overlay.innerHTML = top.map(d=>
+    `<span class="det-tag">${EM[d.name]||'📦'} ${d.name} ${(d.conf*100).toFixed(0)}%</span>`
+  ).join('');
+  document.getElementById('detCount').textContent = detections.length;
+  const maxConf = Math.max(...detections.map(d=>d.conf));
+  document.getElementById('confStat').textContent = (maxConf*100).toFixed(0)+'%';
 }
 
-// ── POPUPS ──
+// ─────────────────────────────────────────────────────
+//  POPUPS
+// ─────────────────────────────────────────────────────
 function showAddPopup(item){
-  totalDetected++;
-  document.getElementById('detCount').textContent=totalDetected;
   document.getElementById('detStatus').textContent="Added!";
-  document.getElementById('confStat').textContent=(60+Math.random()*35).toFixed(0)+'%';
   document.getElementById('addIcon').textContent=EM[item.name]||'📦';
   document.getElementById('addName').textContent=item.name;
   document.getElementById('addPrice').textContent='₹'+item.price;
@@ -538,7 +743,10 @@ function showAddPopup(item){
   pop.style.animation='none';pop.offsetHeight;
   pop.style.animation='popGreen 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
   if(addPopTimer)clearTimeout(addPopTimer);
-  addPopTimer=setTimeout(()=>{pop.style.display='none';document.getElementById('detStatus').textContent='Scanning';},3500);
+  addPopTimer=setTimeout(()=>{
+    pop.style.display='none';
+    document.getElementById('detStatus').textContent='Scanning';
+  },3500);
   showNut(item.name);
   toast(`🛒 ${item.name} added — ₹${item.price}`);
 }
@@ -556,7 +764,9 @@ function showRemovePopup(item){
   toast(`🗑️ ${item.name} removed`);
 }
 
-// ── NUTRITION ──
+// ─────────────────────────────────────────────────────
+//  NUTRITION
+// ─────────────────────────────────────────────────────
 function showNut(name){
   const n=NUT[name];if(!n)return;
   document.getElementById('nutritionEmpty').style.display='none';
@@ -578,57 +788,95 @@ function showNut(name){
     </div>`;
 }
 
-// ── CART ──
-function renderCart(){
-  const l=document.getElementById('cartList');
-  const total=cart.reduce((s,i)=>s+i.price,0);
-  document.getElementById('cartBadge').textContent=cart.length;
-  document.getElementById('totalNum').textContent='₹'+total;
-  document.getElementById('payBtn').disabled=cart.length===0;
-  if(!cart.length){
+// ─────────────────────────────────────────────────────
+//  CART RENDER
+// ─────────────────────────────────────────────────────
+function renderCart(serverTotal){
+  const total = serverTotal !== undefined
+    ? serverTotal
+    : serverCart.reduce((s,i)=>s+i.price,0);
+
+  document.getElementById('cartBadge').textContent = serverCart.length;
+  document.getElementById('totalNum').textContent = '₹'+total;
+  document.getElementById('payBtn').disabled = serverCart.length === 0;
+
+  const l = document.getElementById('cartList');
+  if(!serverCart.length){
     l.innerHTML='<div class="empty"><span class="ei">🛒</span><span>Cart is empty</span><span style="font-size:12px">Point camera at products</span></div>';
     return;
   }
-  l.innerHTML=cart.map((item,i)=>`
-    <div class="crow" onclick="showNut('${item.name}')">
+  l.innerHTML = serverCart.map((item,i)=>`
+    <div class="crow" onclick="showNut('${item.name.replace(/'/g,"\\'")}')">
       <span class="re">${EM[item.name]||'📦'}</span>
-      <div class="ri"><div class="rn">${item.name}</div><div class="rp">₹${item.price}</div></div>
-      <button class="rrm" onclick="event.stopPropagation();removeItem(${i})">✕</button>
+      <div class="ri">
+        <div class="rn">${item.name}</div>
+        <div class="rp">₹${item.price}</div>
+        ${item.weight_g?`<div class="rw">${item.weight_g}g</div>`:''}
+      </div>
+      <button class="rrm" onclick="event.stopPropagation();removeItem(${i})" title="Remove">✕</button>
     </div>`).join('');
 }
 
+// Manual remove from cart UI (calls server tare/clear)
 async function removeItem(idx){
-  const removed=cart[idx];
-  cart.splice(idx,1);
-  if(piConnected)lastServerCount=cart.length;
-  showRemovePopup(removed);renderCart();
-  try{await fetch(`${RENDER_URL}/remove/${idx}`);}catch{}
+  const removed = serverCart[idx];
+  if(!removed)return;
+  showRemovePopup(removed);
+  // Optimistically update UI
+  serverCart.splice(idx,1);
+  renderCart();
+  // Tell server via legacy remove endpoint (server will reconcile on next Pi push)
+  try{await fetch(`/remove/${idx}`);}catch{}
 }
 
-// ── WEIGHT ──
+// ─────────────────────────────────────────────────────
+//  WEIGHT
+// ─────────────────────────────────────────────────────
 function updateWeight(g){
-  document.getElementById('weightNum').innerHTML=`${g}<span class="wu">g</span>`;
+  document.getElementById('weightNum').innerHTML=`${Math.round(g)}<span class="wu">g</span>`;
   document.getElementById('wbarFill').style.width=Math.min((g/5000)*100,100)+'%';
-  const diff=Math.abs(g-lastWeight);
-  if(diff>40){
+  const diff = g - lastWeight;
+  if(Math.abs(diff) > 30){
     const c=document.getElementById('wstatChip'),t=document.getElementById('wdeltaText');
-    if(g>lastWeight){c.className='wsc added';c.textContent='Added';t.textContent=`+${diff}g`;}
-    else{c.className='wsc removed';c.textContent='Removed';t.textContent=`-${diff}g`;}
-    setTimeout(()=>{c.className='wsc stable';c.textContent='Stable';t.textContent='Stable';},4000);
+    if(diff>0){
+      c.className='wsc added';c.textContent='Added';
+      t.textContent=`+${Math.round(diff)}g`;
+    } else {
+      c.className='wsc removed';c.textContent='Removed';
+      t.textContent=`-${Math.round(Math.abs(diff))}g`;
+    }
+    if(weightStableTimer)clearTimeout(weightStableTimer);
+    weightStableTimer=setTimeout(()=>{
+      c.className='wsc stable';c.textContent='Stable';
+      t.textContent='Stable';
+    },4000);
   }
   lastWeight=g;
 }
 
-// ── RAZORPAY ──
+// ─────────────────────────────────────────────────────
+//  PAYMENT
+// ─────────────────────────────────────────────────────
 async function startPayment(){
-  if(cart.length===0){toast('⚠️ Cart is empty');return;}
+  if(serverCart.length===0){toast('⚠️ Cart is empty');return;}
   onPaymentPage=true;
-  document.getElementById('fraudBanner').classList.remove('active');
-  const total=cart.reduce((s,i)=>s+i.price,0);
-  paidTotal=total;
+  closeBanner('fraudBanner');
+  const total = serverCart.reduce((s,i)=>s+i.price,0);
+  paidTotal = total;
+
   showProcessing('Creating Order...','Setting up your payment');
+
+  // Tell server Pi is in payment mode (blocks cart changes)
   try{
-    const r=await fetch(`${RENDER_URL}/create_order`,{
+    await fetch('/pi/set_payment_mode',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({trolley_id:PI_TROLLEY})
+    });
+  }catch{}
+
+  try{
+    const r=await fetch('/create_order',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({amount:total})
@@ -639,12 +887,13 @@ async function startPayment(){
       toast('⚠️ Could not create order: '+(d.message||'Try again'));
       onPaymentPage=false;return;
     }
+
     const options={
       key:RZP_KEY_ID,
       amount:total*100,
       currency:'INR',
       name:'SmartTrolley',
-      description:`Trolley ${trolleyNum} — ${cart.length} items`,
+      description:`Trolley ${trolleyNum} — ${serverCart.length} items`,
       order_id:d.order_id,
       prefill:{contact:'+91'+currentPhone},
       notes:{trolley:trolleyNum},
@@ -659,7 +908,7 @@ async function startPayment(){
         ondismiss:function(){
           onPaymentPage=false;
           hideProcessing();
-          toast('⚠️ Payment cancelled. Try again when ready.');
+          toast('⚠️ Payment cancelled.');
         }
       }
     };
@@ -668,11 +917,12 @@ async function startPayment(){
   }catch(e){
     hideProcessing();onPaymentPage=false;
     toast('⚠️ Payment error. Try again.');
-    console.error(e);
   }
 }
 
-// ── BILL PAGE — fully automatic ──
+// ─────────────────────────────────────────────────────
+//  BILL PAGE
+// ─────────────────────────────────────────────────────
 function openBillPage(){
   const now=new Date();
   document.getElementById('bpDate').textContent=now.toLocaleString('en-IN',{
@@ -680,35 +930,29 @@ function openBillPage(){
   });
   document.getElementById('bpTrolleyInfo').textContent=`Trolley ${trolleyNum} · +91 ${currentPhone}`;
   document.getElementById('bpTxnId').textContent=paymentId?`Txn: ${paymentId}`:'';
-  document.getElementById('bpItems').innerHTML=cart.map(i=>`
+  document.getElementById('bpItems').innerHTML=serverCart.map(i=>`
     <div class="bp-item">
       <div class="bp-il"><span class="bp-em">${EM[i.name]||'📦'}</span><span class="bp-nm">${i.name}</span></div>
       <span class="bp-pr">₹${i.price}</span>
     </div>`).join('');
   document.getElementById('bpTotal').textContent='₹'+paidTotal;
-
-  // Set WhatsApp status
   document.getElementById('waStatusPhone').textContent=currentPhone;
   document.getElementById('waStatusIcon').textContent='📤';
   document.getElementById('waStatusTitle').textContent='Sending bill to WhatsApp...';
   document.getElementById('waResendBtn').style.display='none';
-
   goTo('billpage');
   toast("✅ Payment successful! Sending your bill...");
-
-  // Auto send immediately — no button needed
   sendBillAuto();
 }
 
-// ── AUTO SEND BILL ──
 async function sendBillAuto(){
   try{
-    const r=await fetch(`${RENDER_URL}/checkout`,{
+    const r=await fetch('/checkout',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         phone:currentPhone,
-        items:cart,
+        items:serverCart,
         total:paidTotal,
         payment_id:paymentId,
         trolley:trolleyNum
@@ -720,12 +964,8 @@ async function sendBillAuto(){
       document.getElementById('waStatusTitle').textContent='Bill sent to WhatsApp!';
       document.getElementById('waResendBtn').style.display='none';
       toast('✅ Bill sent to +91'+currentPhone+'!');
-    } else {
-      setBillFailed();
-    }
-  }catch{
-    setBillFailed();
-  }
+    }else{setBillFailed();}
+  }catch{setBillFailed();}
 }
 
 function setBillFailed(){
@@ -742,18 +982,29 @@ async function resendBill(){
   await sendBillAuto();
 }
 
-// ── DONE ──
+// ─────────────────────────────────────────────────────
+//  DONE / RESET
+// ─────────────────────────────────────────────────────
 async function doneBill(){
   document.getElementById('tyTotal').textContent='₹'+paidTotal+' paid';
-  try{await fetch(`${RENDER_URL}/reset`);}catch{}
+
+  // Clear Pi server cart
+  try{
+    await fetch('/pi/clear_cart',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({trolley_id:PI_TROLLEY})
+    });
+  }catch{}
+
+  // Legacy reset
+  try{await fetch('/reset');}catch{}
+
   if(pollTimer)clearInterval(pollTimer);
-  if(weightTimer)clearInterval(weightTimer);
-  if(demoTimer)clearInterval(demoTimer);
-  cart=[];totalDetected=0;demoIdx=0;
-  lastServerCount=0;piConnected=false;
-  onPaymentPage=false;paidTotal=0;
-  paymentId='';orderId='';
-  renderCart();
+  serverCart=[];prevCartLen=0;
+  onPaymentPage=false;paidTotal=0;paymentId='';orderId='';
+  prevFraudAlert=null;prevTheftAlert=null;
+  renderCart(0);
   goTo('thankyou');
   const bar=document.getElementById('tyBar');
   bar.style.animation='none';bar.offsetHeight;
@@ -765,37 +1016,35 @@ function startNewSession(){
   document.getElementById('loginPhone').value='';
   document.getElementById('nutritionPanel').classList.remove('visible');
   document.getElementById('nutritionEmpty').style.display='';
-  document.getElementById('fraudBanner').classList.remove('active');
+  closeBanner('fraudBanner');closeBanner('theftBanner');
   document.getElementById('loginBtn').disabled=true;
   document.getElementById('phoneHint').textContent='Enter your 10-digit number then click OK';
   document.getElementById('phoneHint').style.color='var(--t3)';
-  cart=[];currentPhone='';piConnected=false;
-  demoIdx=0;lastServerCount=0;
-  onPaymentPage=false;paidTotal=0;
-  paymentId='';orderId='';
+  document.getElementById('detOverlay').innerHTML='';
+  document.getElementById('camFeed').style.display='none';
+  document.getElementById('camPlaceholder').style.display='flex';
+  document.getElementById('camPlaceholderText').textContent='Connecting to Pi camera...';
+  document.getElementById('camLiveBadge').style.display='none';
+  currentPhone='';piOnline=false;piWasOnline=false;
+  serverCart=[];lastWeight=0;
   generateTrolleyQR();
   goTo('startup');
 }
 
-// ── SIMULATIONS ──
-function simFPS(){
-  setInterval(()=>{document.getElementById('fpsStat').textContent=(9+Math.random()*4).toFixed(1);},1200);
-}
-let simW=0;
-function startWeightSim(){
-  weightTimer=setInterval(()=>{
-    simW+=(Math.random()-0.35)*12;
-    simW=Math.max(0,Math.min(simW,3000));
-    if(!piConnected)updateWeight(Math.round(simW));
-  },3000);
-}
+// ─────────────────────────────────────────────────────
+//  TOAST
+// ─────────────────────────────────────────────────────
+let toastTimer=null;
 function toast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),3500);
+  if(toastTimer)clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
 }
 
-// ── INIT ──
+// ─────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────
 generateTrolleyQR();
 document.getElementById('loginPhone').addEventListener('keypress',e=>{
   if(e.key==='Enter')doLogin();

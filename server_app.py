@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, render_template_string, make_response
+from flask import Flask, request, jsonify, render_template, render_template_string, make_response, Response
 from bill_generator import generate_bill
 from logger import log_purchase, read_logs
 import os
@@ -9,6 +9,7 @@ import hmac
 from datetime import datetime
 from collections import defaultdict
 import time as _time
+import threading
 
 app = Flask(__name__)
 
@@ -32,7 +33,6 @@ PRODUCTS = {
     "Fresh& Fruity":    {"name": "Fresh & Fruity",    "price": 30,  "stock": 100},
 }
 
-# Expected weights in grams — used for Pi fusion matching
 PRODUCT_WEIGHTS = {
     "Book Record":      300,
     "Brustro Pencils":  150,
@@ -82,13 +82,103 @@ print(f"Wati         : {'set' if WATI_API_URL else 'MISSING'}")
 print(f"Twilio       : {'set' if TWILIO_SID else 'MISSING'}")
 
 # ─────────────────────────────────────────────────────────────────
-#  LEGACY CART  (manual add_item flow)
+#  LEGACY CART
 # ─────────────────────────────────────────────────────────────────
 cart = []
 current_weight = 0
 
 # ─────────────────────────────────────────────────────────────────
-#  LEGACY ROUTES  (kept exactly as original)
+#  VIDEO FRAME STORE  — Pi pushes JPEGs here, browser pulls MJPEG
+# ─────────────────────────────────────────────────────────────────
+_frame_store      = {}   # trolley_id → latest JPEG bytes
+_frame_store_lock = threading.Lock()
+_frame_listeners  = defaultdict(list)   # trolley_id → list of queue-like events
+_frame_events     = {}   # trolley_id → threading.Event
+
+
+def _get_or_create_event(trolley_id):
+    if trolley_id not in _frame_events:
+        _frame_events[trolley_id] = threading.Event()
+    return _frame_events[trolley_id]
+
+
+@app.route('/pi/frame/<trolley_id>', methods=['POST'])
+def receive_frame(trolley_id):
+    """Pi POSTs raw JPEG here. Server stores it and notifies waiting streams."""
+    jpg = request.get_data()
+    if not jpg:
+        return jsonify({'error': 'no data'}), 400
+    with _frame_store_lock:
+        _frame_store[trolley_id] = jpg
+    # Notify all waiting MJPEG generator threads
+    ev = _get_or_create_event(trolley_id)
+    ev.set()
+    ev.clear()
+    return jsonify({'status': 'ok', 'size': len(jpg)}), 200
+
+
+@app.route('/pi/video_feed/<trolley_id>')
+def video_feed(trolley_id):
+    """
+    Browser points <img> here.
+    Streams MJPEG by serving each frame as it arrives from the Pi.
+    """
+    def generate():
+        ev = _get_or_create_event(trolley_id)
+        # Send offline placeholder if Pi hasn't connected yet
+        offline_jpg = _make_offline_frame()
+        last_sent   = b""
+        while True:
+            with _frame_store_lock:
+                jpg = _frame_store.get(trolley_id, None)
+            if jpg and jpg != last_sent:
+                last_sent = jpg
+                yield (b"--frame\r\n"
+                       b"Content-Type: image/jpeg\r\n\r\n" + jpg + b"\r\n")
+            else:
+                if not jpg:
+                    yield (b"--frame\r\n"
+                           b"Content-Type: image/jpeg\r\n\r\n" + offline_jpg + b"\r\n")
+                ev.wait(timeout=1.0)
+
+    return Response(
+        generate(),
+        mimetype="multipart/x-mixed-replace; boundary=frame",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "X-Accel-Buffering": "no",   # important for nginx on render
+        }
+    )
+
+
+@app.route('/pi/snapshot/<trolley_id>')
+def snapshot(trolley_id):
+    """Return the latest frame as a plain JPEG (useful for <img> polling fallback)."""
+    with _frame_store_lock:
+        jpg = _frame_store.get(trolley_id)
+    if not jpg:
+        jpg = _make_offline_frame()
+    return Response(jpg, mimetype="image/jpeg",
+                    headers={"Cache-Control": "no-cache"})
+
+
+def _make_offline_frame():
+    """Generate a small grey placeholder JPEG when Pi is offline."""
+    try:
+        import cv2
+        import numpy as np
+        img = np.zeros((240, 320, 3), dtype='uint8')
+        img[:] = (40, 40, 40)
+        cv2.putText(img, "Pi Camera Offline", (30, 120),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 100, 100), 2)
+        _, buf = cv2.imencode('.jpg', img)
+        return buf.tobytes()
+    except Exception:
+        return b""
+
+
+# ─────────────────────────────────────────────────────────────────
+#  LEGACY ROUTES
 # ─────────────────────────────────────────────────────────────────
 @app.route('/')
 def index():
@@ -203,7 +293,6 @@ def checkout():
 
         if phone.startswith('91') and len(phone) == 12:
             phone = phone[2:]
-
         phone = phone[-10:]
         print(f"Final phone: '{phone}' length: {len(phone)}")
 
@@ -215,11 +304,8 @@ def checkout():
         bill       = generate_bill(bill_items, bill_total)
 
         print(f"Sending bill to {phone} total=Rs.{bill_total} items={len(bill_items)}")
-
-        # Log the purchase
         log_purchase(phone, bill_items, bill_total, payment_id, trolley)
 
-        # Deduct stock
         for item in bill_items:
             name = item.get('name')
             if name in PRODUCTS and 'stock' in PRODUCTS[name]:
@@ -296,7 +382,6 @@ def send_via_wati(phone, bill, cart_items=None, total=0, trolley="", payment_id=
                     return True
             except Exception:
                 pass
-
         return False
 
     except Exception as e:
@@ -328,13 +413,13 @@ def owner_dashboard():
 
 
 # ─────────────────────────────────────────────────────────────────
-#  PI FUSION — settings
+#  PI FUSION SETTINGS
 # ─────────────────────────────────────────────────────────────────
-WEIGHT_THRESHOLD   = 20     # grams — minimum delta to act on
-WEIGHT_TOLERANCE   = 0.35   # 35% — weight matching tolerance
-DETECTION_COOLDOWN = 5      # seconds before same item can be re-added
-SESSION_TIMEOUT    = 600    # 10 min idle → auto-clear cart
-ALERT_CLEAR_TIME   = 30     # seconds → auto-clear alerts
+WEIGHT_THRESHOLD   = 20
+WEIGHT_TOLERANCE   = 0.35
+DETECTION_COOLDOWN = 5
+SESSION_TIMEOUT    = 600
+ALERT_CLEAR_TIME   = 30
 
 trolley_state = defaultdict(lambda: {
     'weight'         : 0.0,
@@ -356,7 +441,6 @@ trolley_state = defaultdict(lambda: {
 
 
 def best_weight_match(delta, detections):
-    """Return detected item name whose expected weight best matches delta."""
     for det in detections:
         expected = PRODUCT_WEIGHTS.get(det.get('name', ''), 0)
         if expected > 0 and abs(delta - expected) <= expected * WEIGHT_TOLERANCE:
@@ -365,7 +449,6 @@ def best_weight_match(delta, detections):
 
 
 def find_removed(delta, cart_items):
-    """Return cart item name whose weight matches a removal delta."""
     for item in reversed(cart_items):
         expected = PRODUCT_WEIGHTS.get(item.get('name', ''), 0)
         if expected > 0 and abs(delta - expected) <= expected * WEIGHT_TOLERANCE:
@@ -378,10 +461,6 @@ def find_removed(delta, cart_items):
 # ─────────────────────────────────────────────────────────────────
 @app.route('/pi/sensor_data', methods=['POST'])
 def sensor_data():
-    """
-    Pi posts here every 0.5s.
-    Payload: { trolley_id, weight, detections, arduino_ok, camera_ok, fps, timestamp }
-    """
     data = request.get_json(silent=True)
     if not data:
         return jsonify({'error': 'no data'}), 400
@@ -390,7 +469,6 @@ def sensor_data():
     ts  = _time.time()
     s   = trolley_state[tid]
 
-    # Update hardware status
     s['arduino_ok'] = data.get('arduino_ok', False)
     s['camera_ok']  = data.get('camera_ok',  False)
     s['fps']        = data.get('fps', 0.0)
@@ -402,7 +480,7 @@ def sensor_data():
     s['weight']      = new_weight
     delta            = new_weight - s['baseline_weight']
 
-    # ── Item ADDED ────────────────────────────────────────────
+    # ── Item ADDED ──────────────────────────────────────────────
     if delta > WEIGHT_THRESHOLD:
         dets = s['detections']
         name = best_weight_match(delta, dets)
@@ -440,7 +518,7 @@ def sensor_data():
                     s['last_activity']   = ts
                     cooldowns[name]      = ts
 
-    # ── Item REMOVED ──────────────────────────────────────────
+    # ── Item REMOVED ────────────────────────────────────────────
     elif delta < -WEIGHT_THRESHOLD:
         removed_delta = abs(delta)
         if s['payment_mode']:
@@ -463,13 +541,13 @@ def sensor_data():
             else:
                 s['baseline_weight'] = new_weight
 
-    # ── Session timeout ───────────────────────────────────────
+    # ── Session timeout ─────────────────────────────────────────
     if s['cart'] and not s['payment_mode'] and ts - s['last_activity'] > SESSION_TIMEOUT:
         s['cart']            = []
         s['total']           = 0.0
         s['baseline_weight'] = new_weight
 
-    # ── Auto-clear old alerts ─────────────────────────────────
+    # ── Auto-clear old alerts ───────────────────────────────────
     for key in ('theft_alert', 'fraud_alert'):
         alert = s[key]
         if alert and ts - alert.get('timestamp', ts) > ALERT_CLEAR_TIME:
@@ -480,8 +558,8 @@ def sensor_data():
 
 @app.route('/pi/trolley_status/<trolley_id>')
 def trolley_status(trolley_id):
-    """Dashboard polls this to get cart + alerts."""
     s = trolley_state[trolley_id]
+    online = (_time.time() - s['last_seen']) < 10
     return jsonify({
         'trolley_id'      : trolley_id,
         'cart'            : s['cart'],
@@ -497,7 +575,10 @@ def trolley_status(trolley_id):
         'arduino_ok'      : s['arduino_ok'],
         'camera_ok'       : s['camera_ok'],
         'fps'             : s['fps'],
-        'online'          : (_time.time() - s['last_seen']) < 10,
+        'online'          : online,
+        # ✅ video stream URL for the frontend to use
+        'video_url'       : f'/pi/video_feed/{trolley_id}',
+        'snapshot_url'    : f'/pi/snapshot/{trolley_id}',
     })
 
 
@@ -536,17 +617,17 @@ def pi_clear_cart():
 @app.route('/pi/reset/<trolley_id>', methods=['POST'])
 def pi_reset(trolley_id):
     trolley_state.pop(trolley_id, None)
+    with _frame_store_lock:
+        _frame_store.pop(trolley_id, None)
     return jsonify({'status': 'reset', 'trolley_id': trolley_id})
 
 
 @app.route('/pi/checkout_fusion/<trolley_id>', methods=['POST'])
 def pi_checkout_fusion(trolley_id):
-    """Checkout a Pi-managed trolley — returns bill JSON and clears the cart."""
     s     = trolley_state[trolley_id]
     items = list(s['cart'])
     total = s['total']
     bill  = generate_bill(items, total)
-    # Clear session
     s['cart']            = []
     s['total']           = 0.0
     s['payment_mode']    = False
@@ -564,7 +645,7 @@ def pi_checkout_fusion(trolley_id):
 
 
 # ─────────────────────────────────────────────────────────────────
-#  LIVE DASHBOARD  (auto-refreshes every 2s)
+#  LIVE DASHBOARD
 # ─────────────────────────────────────────────────────────────────
 DASHBOARD_HTML = """
 <!DOCTYPE html>
@@ -581,7 +662,7 @@ header h1{font-size:1.35rem;color:#38bdf8}
 .dot{width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;animation:blink 1.5s infinite}
 .dot.off{background:#ef4444;animation:none}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-main{padding:2rem;max-width:1100px;margin:0 auto}
+main{padding:2rem;max-width:1200px;margin:0 auto}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem}
 .card{background:#1e293b;border-radius:12px;padding:1.1rem;border:1px solid #334155}
 .card h3{font-size:.68rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.4rem}
@@ -602,6 +683,11 @@ td{padding:.65rem 1rem;border-top:1px solid #334155;font-size:.86rem}
 .red{background:#dc2626;color:#fff}.red:hover{background:#b91c1c}
 .green{background:#16a34a;color:#fff}.green:hover{background:#15803d}
 #ts{font-size:.68rem;color:#475569;margin-top:.6rem}
+.video-box{background:#0f172a;border-radius:12px;overflow:hidden;border:1px solid #334155;margin-bottom:1.5rem}
+.video-box img{width:100%;max-height:400px;object-fit:contain;display:block;background:#000}
+.video-box p{text-align:center;font-size:.7rem;color:#475569;padding:.4rem}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+@media(max-width:700px){.two-col{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -610,18 +696,37 @@ td{padding:.65rem 1rem;border-top:1px solid #334155;font-size:.86rem}
   <h1>🛒 SmartTrolley Live Dashboard</h1>
 </header>
 <main>
-  <div class="grid">
-    <div class="card"><h3>Status</h3><p id="st">—</p></div>
-    <div class="card"><h3>Cart Items</h3><p id="ic">—</p></div>
-    <div class="card"><h3>Total</h3><p id="ct">—<span> ₹</span></p></div>
-    <div class="card"><h3>Weight Now</h3><p id="wt">—<span> g</span></p></div>
-    <div class="card"><h3>Weight Delta</h3><p id="wd">—<span> g</span></p></div>
-    <div class="card"><h3>Hardware</h3>
-      <div class="hw">
-        <span id="hcam" class="err">Cam ✗</span>
-        <span id="hard" class="err">Arduino ✗</span>
-        <span id="hfps" class="err">0 FPS</span>
+
+  <div class="two-col">
+    <!-- Left: video -->
+    <div>
+      <span class="section">Live Camera</span>
+      <div class="video-box">
+        <img id="cam-feed" src="/pi/video_feed/trolley_01" alt="Camera Feed"/>
+        <p id="cam-label">📷 Pi Camera → Render Stream</p>
       </div>
+    </div>
+
+    <!-- Right: stats -->
+    <div>
+      <span class="section">Status</span>
+      <div class="grid" style="margin-bottom:1rem">
+        <div class="card"><h3>Status</h3><p id="st">—</p></div>
+        <div class="card"><h3>Cart Items</h3><p id="ic">—</p></div>
+        <div class="card"><h3>Total</h3><p id="ct">—<span> ₹</span></p></div>
+        <div class="card"><h3>Weight Now</h3><p id="wt">—<span> g</span></p></div>
+        <div class="card"><h3>Weight Delta</h3><p id="wd">—<span> g</span></p></div>
+        <div class="card"><h3>Hardware</h3>
+          <div class="hw">
+            <span id="hcam" class="err">Cam ✗</span>
+            <span id="hard" class="err">Arduino ✗</span>
+            <span id="hfps" class="err">0 FPS</span>
+          </div>
+        </div>
+      </div>
+
+      <span class="section">Alerts</span>
+      <div id="alerts-box"><p style="color:#475569;font-size:.8rem">No alerts</p></div>
     </div>
   </div>
 
@@ -630,9 +735,6 @@ td{padding:.65rem 1rem;border-top:1px solid #334155;font-size:.86rem}
     <thead><tr><th>Item</th><th>Weight</th><th>Price</th><th>Added At</th></tr></thead>
     <tbody id="cart-body"><tr><td colspan="4" style="color:#475569">Waiting for data...</td></tr></tbody>
   </table>
-
-  <span class="section">Alerts</span>
-  <div id="alerts-box"><p style="color:#475569;font-size:.8rem">No alerts</p></div>
 
   <div style="margin-top:1.5rem">
     <button class="btn blue"  onclick="doCheckout()">✅ Checkout</button>
@@ -665,6 +767,10 @@ async function fetchStatus(){
     ard.textContent = d.arduino_ok ? "Arduino ✓" : "Arduino ✗";
     ard.className   = d.arduino_ok ? "ok"        : "err";
     document.getElementById("hfps").textContent = (d.fps||0).toFixed(1)+" FPS";
+
+    // Update camera label
+    document.getElementById("cam-label").textContent =
+      d.online ? "📷 Live — Pi Camera" : "📷 Pi Camera Offline";
 
     const tb = document.getElementById("cart-body");
     tb.innerHTML = d.cart && d.cart.length
@@ -727,10 +833,13 @@ def dashboard():
 # ─────────────────────────────────────────────────────────────────
 @app.route('/health')
 def health():
+    with _frame_store_lock:
+        active_streams = list(_frame_store.keys())
     return jsonify({
-        'status'   : 'ok',
-        'trolleys' : list(trolley_state.keys()),
-        'products' : len(PRODUCTS),
+        'status'        : 'ok',
+        'trolleys'      : list(trolley_state.keys()),
+        'products'      : len(PRODUCTS),
+        'active_streams': active_streams,
     })
 
 

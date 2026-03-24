@@ -4,3 +4,4 @@ gunicorn
 requests
 reportlab
 razorpay
+opencv-python-headless
