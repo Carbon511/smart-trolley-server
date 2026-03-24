@@ -1,7 +1,9 @@
 flask
-twilio
+ultralytics
+opencv-python-headless
+numpy
 gunicorn
 requests
-reportlab
+twilio
 razorpay
-opencv-python-headless
+reportlab
