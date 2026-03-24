@@ -1,5 +1,6 @@
 flask
 ultralytics
+onnx
 onnxruntime
 opencv-python-headless
 numpy
@@ -7,3 +8,4 @@ gunicorn
 requests
 reportlab
 razorpay
+twilio
