@@ -2,10 +2,23 @@ services:
   - type: web
     name: smart-trolley
     runtime: python
-    # This installs your AI libraries and Flask
     buildCommand: pip install -r requirements.txt
-    # We use 1 worker to save RAM and ensure the Cart data stays in sync
-    startCommand: gunicorn server_app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    # 1 worker = cart state stays consistent (in-memory store)
+    # 2 threads = handle Pi frame uploads + dashboard polls simultaneously
+    startCommand: gunicorn server_app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10.0
+        value: "3.10.0"
+      # ── Set these in Render Dashboard → Environment ──────────
+      # - key: RAZORPAY_KEY_ID
+      #   value: "rzp_live_..."
+      # - key: RAZORPAY_KEY_SECRET
+      #   value: "your_secret"
+      # - key: TWILIO_SID
+      #   value: "ACxxxxx"
+      # - key: TWILIO_TOKEN
+      #   value: "your_token"
+      # - key: TWILIO_WA_FROM
+      #   value: "whatsapp:+14155238886"
+      # - key: MODEL_PATH
+      #   value: "model.onnx"
