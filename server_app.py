@@ -27,6 +27,7 @@ Payment & Billing:
   GET  /owner                — owner dashboard
   GET  /dashboard            — serve index.html
   GET  /health               — server health check
+  GET  /ping                 — uptime check (UptimeRobot)
 """
 
 import io
@@ -515,6 +516,14 @@ def _find_product(detection_name):
 #  FLASK APP
 # ═══════════════════════════════════════════════════════════════
 app = Flask(__name__)
+
+
+# ── Ping / Uptime check ───────────────────────────────────────
+# ✅ FIX: Added /ping route — required by UptimeRobot & Render health checks
+
+@app.route("/ping", methods=["GET", "HEAD"])
+def ping():
+    return "pong", 200
 
 
 # ── Pi → Server ───────────────────────────────────────────────
