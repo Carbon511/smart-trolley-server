@@ -548,10 +548,9 @@ def pi_frame(trolley_id):
         return jsonify({"error": "empty"}), 400
     entry = get_trolley(trolley_id)
     with store_lock:
-        entry["_rx_ts"] = time.time()
-        if entry["frame"] is None:
-            entry["frame"]    = raw
-            entry["frame_ts"] = time.time()
+        entry["_rx_ts"]   = time.time()
+        entry["frame"]    = raw          # always store raw immediately
+        entry["frame_ts"] = time.time() # always update timestamp
     try:
         _infer_queue.put_nowait((trolley_id, raw))
     except Exception:
@@ -585,7 +584,7 @@ def api_frame(trolley_id):
     entry    = get_trolley(trolley_id)
     frame    = entry.get("frame")
     frame_ts = entry.get("frame_ts", 0)
-    if not frame or (time.time() - frame_ts) > 12:
+    if not frame or (time.time() - frame_ts) > 60:
         return send_file(
             io.BytesIO(_grey_placeholder()),
             mimetype="image/jpeg", max_age=0
