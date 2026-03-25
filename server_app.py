@@ -515,11 +515,10 @@ def _find_product(detection_name):
 # ═══════════════════════════════════════════════════════════════
 #  FLASK APP
 # ═══════════════════════════════════════════════════════════════
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates")
 
 
 # ── Ping / Uptime check ───────────────────────────────────────
-# ✅ FIX: Added /ping route — required by UptimeRobot & Render health checks
 
 @app.route("/ping", methods=["GET", "HEAD"])
 def ping():
@@ -712,10 +711,16 @@ def checkout():
 
 @app.route("/owner", methods=["GET"])
 def owner_dashboard():
-    here     = os.path.dirname(os.path.abspath(__file__))
-    tpl_path = os.path.join(here, "owner.html")
-    if not os.path.exists(tpl_path):
-        return "<h2>owner.html not found</h2>", 404
+    here = os.path.dirname(os.path.abspath(__file__))
+    # Check templates/ folder first, then root as fallback
+    tpl_path = None
+    for folder in [os.path.join(here, "templates"), here]:
+        candidate = os.path.join(folder, "owner.html")
+        if os.path.exists(candidate):
+            tpl_path = candidate
+            break
+    if not tpl_path:
+        return "<h2>owner.html not found — place it inside the templates/ folder</h2>", 404
     with open(tpl_path, encoding="utf-8") as f:
         template = f.read()
     logs = read_logs(200)
@@ -732,10 +737,11 @@ def root():
 @app.route("/dashboard", methods=["GET"])
 def dashboard():
     here = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(here, "index.html")
-    if os.path.exists(path):
-        return send_from_directory(here, "index.html")
-    return "<h2>index.html not found</h2>", 404
+    # Check templates/ folder first, then root as fallback
+    for folder in [os.path.join(here, "templates"), here]:
+        if os.path.exists(os.path.join(folder, "index.html")):
+            return send_from_directory(folder, "index.html")
+    return "<h2>index.html not found — place it inside the templates/ folder</h2>", 404
 
 
 # ── Health ────────────────────────────────────────────────────
