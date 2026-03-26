@@ -100,7 +100,21 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 
 /* Camera */
 .camw{width:100%;height:260px;background:#111;position:relative;overflow:hidden;}
-.camw img{width:100%;height:100%;object-fit:cover;display:block;}
+
+/* ─── MJPEG FEED ──────────────────────────────────────────────────
+   #camFeed is hidden until the first frame arrives (onload).
+   onerror fires if the stream drops — we wait 2 s then reconnect
+   by appending ?r=<timestamp> which forces a fresh HTTP request.
+   No setInterval needed; the browser keeps the connection open.
+   The Pi must send  X-Accel-Buffering: no  so ngrok won't buffer.
+   ─────────────────────────────────────────────────────────────── */
+#camFeed{
+  display:none;            /* hidden until first frame */
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
 .camp{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#666;background:#111;}
 .camp span:first-child{font-size:36px;opacity:0.3;}
 .camp span:last-child{font-size:11px;font-family:monospace;background:rgba(255,255,255,0.07);padding:5px 10px;border-radius:6px;color:#888;}
@@ -291,9 +305,28 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
           <span class="blv" id="detStatusLabel"><span class="bdot"></span>Active</span>
         </div>
         <div class="camw">
-          <!-- ── CHANGE: JPEG poll via /api/frame/<id> instead of MJPEG stream ── -->
-          <img id="camFeed" style="display:none" alt="camera feed"
-               onerror="onCamError()" onload="onCamLoad()">
+
+          <!--
+            ═══════════════════════════════════════════════════════════════
+            MJPEG STREAM FIX
+            ─────────────────────────────────────────────────────────────
+            • src is set by startCameraFeed() after login — NOT on page load
+              (avoids a wasted connection while on the login screen)
+            • display:none until onCamLoad() fires (first frame received)
+            • onerror waits 2 s then reconnects via ?r=<timestamp> which
+              forces the browser to open a completely fresh TCP connection
+              (important when ngrok cycles or the Pi restarts)
+            • The Pi Flask route must include the response header:
+                X-Accel-Buffering: no
+              so ngrok/nginx does NOT buffer the multipart stream.
+            • NO setInterval required — the browser holds the connection.
+            ═══════════════════════════════════════════════════════════════
+          -->
+          <img id="camFeed"
+               alt="Live camera feed"
+               onload="onCamLoad()"
+               onerror="onCamError()">
+
           <div class="camp" id="camPlaceholder">
             <span>📷</span>
             <span id="camPlaceholderText">Connecting to Pi camera...</span>
@@ -379,7 +412,7 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
   </div>
 </div>
 
-<!-- PROCESSING -->
+<!-- PROCESSING OVERLAY -->
 <div id="processingOverlay">
   <div class="proc-card">
     <div class="proc-spinner"></div>
@@ -430,25 +463,24 @@ body{background:var(--bg);color:var(--t);font-family:'Plus Jakarta Sans',sans-se
 
 <script>
 // ─────────────────────────────────────────────────────
-//  CONFIG
+//  CONFIG — edit these to match your deployment
 // ─────────────────────────────────────────────────────
-const PI_TROLLEY  = "trolley_01";   // must match Pi's TROLLEY_ID
-const RZP_KEY_ID  = "rzp_live_SULbMnyyuHNunP";
-const POLL_MS     = 1500;           // status poll interval ms
-const FRAME_MS    = 120;            // camera frame refresh ms (~8 FPS display)
+const PI_TROLLEY = "trolley_01";          // must match Pi's TROLLEY_ID
+const RZP_KEY_ID = "rzp_live_SULbMnyyuHNunP";
+const POLL_MS    = 1500;                  // status poll interval (ms)
 
 // ─────────────────────────────────────────────────────
 //  STATE
 // ─────────────────────────────────────────────────────
 let currentPhone = "", trolleyNum = "";
-let pollTimer = null, frameTimer = null;
+let pollTimer = null;
 let piOnline = false, piWasOnline = false;
 let serverCart = [];
 let lastWeight = 0, weightStableTimer = null;
 let onPaymentPage = false, paidTotal = 0, paymentId = "", orderId = "";
 let addPopTimer = null, removePopTimer = null;
-let prevFraudTs = null, prevTheftTs = null;  // ── CHANGE: compare by timestamp not object ref
-let camRetryTimer = null, camLoaded = false;
+let prevFraudTs = null, prevTheftTs = null;
+let camReconnectTimer = null;
 
 // ─────────────────────────────────────────────────────
 //  PRODUCT DATA
@@ -481,12 +513,12 @@ const EM = {
 //  NAVIGATION
 // ─────────────────────────────────────────────────────
 function goTo(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-function showProcessing(t,s){
-  document.getElementById('procTitle').textContent=t;
-  document.getElementById('procSub').textContent=s;
+function showProcessing(t, s){
+  document.getElementById('procTitle').textContent = t;
+  document.getElementById('procSub').textContent = s;
   document.getElementById('processingOverlay').classList.add('active');
 }
 function hideProcessing(){
@@ -499,133 +531,140 @@ function closeBanner(id){
 // ─────────────────────────────────────────────────────
 //  QR / LOGIN
 // ─────────────────────────────────────────────────────
-function makeQR(boxId,text,size){
-  const el=document.getElementById(boxId);
-  el.innerHTML='';
-  new QRCode(el,{text,width:size,height:size,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M});
+function makeQR(boxId, text, size){
+  const el = document.getElementById(boxId);
+  el.innerHTML = '';
+  new QRCode(el, {text, width:size, height:size,
+    colorDark:"#000000", colorLight:"#ffffff",
+    correctLevel:QRCode.CorrectLevel.M});
 }
 function generateTrolleyQR(){
-  const id=Math.floor(1000+Math.random()*9000);
-  trolleyNum="T-"+id;
-  document.getElementById('trolleyId').textContent=trolleyNum;
-  makeQR('loginQRBox',`${window.location.origin}/?trolley=${trolleyNum}`,160);
+  const id = Math.floor(1000 + Math.random() * 9000);
+  trolleyNum = "T-" + id;
+  document.getElementById('trolleyId').textContent = trolleyNum;
+  makeQR('loginQRBox', `${window.location.origin}/?trolley=${trolleyNum}`, 160);
 }
 function onPhoneInput(val){
-  const btn=document.getElementById('loginBtn');
-  const hint=document.getElementById('phoneHint');
-  if(val.length===10){
-    btn.disabled=false;
-    hint.textContent='✅ Number ready — click OK to start shopping';
-    hint.style.color='var(--green)';
-  } else if(val.length>0){
-    btn.disabled=true;
-    hint.textContent=`${10-val.length} more digit${10-val.length>1?'s':''} needed`;
-    hint.style.color='var(--t3)';
+  const btn  = document.getElementById('loginBtn');
+  const hint = document.getElementById('phoneHint');
+  if(val.length === 10){
+    btn.disabled = false;
+    hint.textContent = '✅ Number ready — click OK to start shopping';
+    hint.style.color = 'var(--green)';
+  } else if(val.length > 0){
+    btn.disabled = true;
+    hint.textContent = `${10 - val.length} more digit${10 - val.length > 1 ? 's' : ''} needed`;
+    hint.style.color = 'var(--t3)';
   } else {
-    btn.disabled=true;
-    hint.textContent='Enter your 10-digit number then click OK';
-    hint.style.color='var(--t3)';
+    btn.disabled = true;
+    hint.textContent = 'Enter your 10-digit number then click OK';
+    hint.style.color = 'var(--t3)';
   }
 }
 function doLogin(){
-  const ph=document.getElementById('loginPhone').value.trim();
-  if(ph.length!==10){toast("⚠️ Enter full 10-digit number");return;}
-  currentPhone=ph;
-  document.getElementById('topTrolleyId').textContent=trolleyNum;
-  document.getElementById('topPhone').textContent='+91 '+currentPhone;
-  document.getElementById('userInit').textContent=currentPhone[0];
-  closeBanner('fraudBanner');closeBanner('theftBanner');
+  const ph = document.getElementById('loginPhone').value.trim();
+  if(ph.length !== 10){ toast("⚠️ Enter full 10-digit number"); return; }
+  currentPhone = ph;
+  document.getElementById('topTrolleyId').textContent = trolleyNum;
+  document.getElementById('topPhone').textContent = '+91 ' + currentPhone;
+  document.getElementById('userInit').textContent = currentPhone[0];
+  closeBanner('fraudBanner'); closeBanner('theftBanner');
   goTo('dashboard');
-  startCameraFeed();
+  startCameraFeed();   // ← starts MJPEG stream AFTER navigating to dashboard
   startPolling();
-  toast("✅ Welcome! Bill will be sent to +91"+currentPhone+" after payment");
+  toast("✅ Welcome! Bill will be sent to +91" + currentPhone + " after payment");
 }
 
 // ─────────────────────────────────────────────────────
-//  CAMERA FEED — CHANGE: poll /api/frame/<id> as JPEG
-//  (server_app.py has no MJPEG endpoint; single-frame JPEG only)
+//  CAMERA — MJPEG stream
+//
+//  Key points:
+//  1. We call this AFTER goTo('dashboard') so the <img> is visible.
+//  2. We clear any pending reconnect timer first to avoid duplicate loads.
+//  3. The src is set once; the browser holds the HTTP connection open and
+//     renders each JPEG frame as it arrives from Flask's multipart stream.
+//  4. onCamLoad() fires when the first byte of the first frame arrives.
+//  5. onCamError() fires if the TCP connection drops (Pi reboot, ngrok
+//     restart, etc.). We wait 2 s then set a fresh src with ?r=<ts>
+//     which forces the browser to open a brand-new connection.
 // ─────────────────────────────────────────────────────
 function startCameraFeed(){
-  clearInterval(frameTimer);
-  camLoaded = false;
-  refreshFrame();                          // immediate first load
-  frameTimer = setInterval(refreshFrame, FRAME_MS);
-}
-
-function refreshFrame(){
+  if(camReconnectTimer){ clearTimeout(camReconnectTimer); camReconnectTimer = null; }
   const img = document.getElementById('camFeed');
-  // Append timestamp to bust cache on every refresh
-  img.src = `/api/frame/${PI_TROLLEY}?t=${Date.now()}`;
+  img.src = `/video_feed/${PI_TROLLEY}`;
   img.style.display = 'block';
 }
 
 function onCamLoad(){
-  camLoaded = true;
-  document.getElementById('camPlaceholder').style.display='none';
-  document.getElementById('camLiveBadge').style.display='flex';
-  if(camRetryTimer){clearTimeout(camRetryTimer);camRetryTimer=null;}
+  // First frame received — hide placeholder, show LIVE badge
+  document.getElementById('camPlaceholder').style.display = 'none';
+  document.getElementById('camLiveBadge').style.display   = 'flex';
+  if(camReconnectTimer){ clearTimeout(camReconnectTimer); camReconnectTimer = null; }
 }
 
 function onCamError(){
-  document.getElementById('camPlaceholder').style.display='flex';
-  document.getElementById('camPlaceholderText').textContent='Pi camera offline — retrying...';
-  document.getElementById('camLiveBadge').style.display='none';
-  // Slow down retries when offline — frameTimer handles re-attempts automatically
+  // Stream dropped — show placeholder and schedule reconnect
+  document.getElementById('camPlaceholder').style.display = 'flex';
+  document.getElementById('camPlaceholderText').textContent = 'Pi camera offline — retrying...';
+  document.getElementById('camLiveBadge').style.display = 'none';
+  if(camReconnectTimer) clearTimeout(camReconnectTimer);
+  camReconnectTimer = setTimeout(() => {
+    const img = document.getElementById('camFeed');
+    // ?r= cache-buster forces a fresh TCP connection (important for ngrok)
+    img.src = `/video_feed/${PI_TROLLEY}?r=${Date.now()}`;
+  }, 2000);
 }
 
 // ─────────────────────────────────────────────────────
-//  MAIN POLL — CHANGE: /api/status/<id> instead of /pi/trolley_status/<id>
+//  MAIN POLL — /api/status/<trolley_id>
 // ─────────────────────────────────────────────────────
 function startPolling(){
-  if(pollTimer)clearInterval(pollTimer);
+  if(pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(pollStatus, POLL_MS);
   pollStatus();
 }
 
 async function pollStatus(){
   try{
-    // ── CHANGE: new endpoint ──
     const r = await fetch(`/api/status/${PI_TROLLEY}`);
-    if(!r.ok)return;
+    if(!r.ok) return;
     const d = await r.json();
 
-    // ── Online / offline ──
+    // ── Online / offline indicator ──────────────────
     piOnline = d.online;
     const chip = document.getElementById('piStatusChip');
     if(piOnline){
-      chip.textContent='🟢 Pi Online';
-      chip.className='chip pi-online';
+      chip.textContent = '🟢 Pi Online';
+      chip.className   = 'chip pi-online';
       if(!piWasOnline){
         toast("📡 Pi connected — Live detection active!");
-        piWasOnline=true;
+        piWasOnline = true;
       }
     } else {
-      chip.textContent='🔴 Pi Offline';
-      chip.className='chip pi-offline';
-      piWasOnline=false;
+      chip.textContent = '🔴 Pi Offline';
+      chip.className   = 'chip pi-offline';
+      piWasOnline = false;
     }
 
-    // ── Hardware status ──
+    // ── Hardware status ─────────────────────────────
     document.getElementById('arduinoLabel').textContent =
       d.arduino_ok ? 'HX711 ✓' : 'HX711 ✗';
     document.getElementById('fpsStat').textContent =
       d.fps ? d.fps.toFixed(1) : '—';
 
-    // ── Live detections overlay ──
+    // ── Live detections overlay ─────────────────────
     updateDetectionsOverlay(d.detections || []);
 
-    // ── Weight — CHANGE: field renamed weight_g (was weight_current) ──
-    if(typeof d.weight_g === 'number'){
-      updateWeight(d.weight_g);
-    }
+    // ── Weight ──────────────────────────────────────
+    if(typeof d.weight_g === 'number') updateWeight(d.weight_g);
 
-    // ── Alerts ──
+    // ── Fraud / theft alerts ────────────────────────
     handleAlerts(d);
 
-    // ── Cart sync ──
+    // ── Cart sync ───────────────────────────────────
     syncCart(d.cart || [], d.total || 0);
 
-  }catch(e){}
+  } catch(e){}
 }
 
 // ─────────────────────────────────────────────────────
@@ -638,29 +677,24 @@ function syncCart(newCart, serverTotal){
   if(newLen > oldLen){
     for(let i = oldLen; i < newLen; i++){
       const item = newCart[i];
-      if(onPaymentPage){
-        handlePaymentFraud("Item added during payment");
-      } else {
-        showAddPopup(item);
-      }
+      if(onPaymentPage) handlePaymentFraud("Item added during payment");
+      else              showAddPopup(item);
     }
   } else if(newLen < oldLen){
     if(onPaymentPage){
       handlePaymentFraud("Item removed during payment");
     } else {
-      const removed = serverCart.find(old=>!newCart.find(n=>n.id===old.id));
+      const removed = serverCart.find(old => !newCart.find(n => n.id === old.id));
       if(removed) showRemovePopup(removed);
     }
   }
 
   serverCart = newCart;
-  if(!onPaymentPage){
-    renderCart(serverTotal);
-  }
+  if(!onPaymentPage) renderCart(serverTotal);
 }
 
 // ─────────────────────────────────────────────────────
-//  ALERTS — CHANGE: compare by .timestamp not object identity
+//  ALERTS
 // ─────────────────────────────────────────────────────
 function handleAlerts(d){
   if(d.fraud_alert){
@@ -671,9 +705,7 @@ function handleAlerts(d){
       document.getElementById('fraudBanner').classList.add('active');
       toast('🚨 ' + (d.fraud_alert.message || 'Fraud detected!'));
     }
-  } else {
-    prevFraudTs = null;
-  }
+  } else { prevFraudTs = null; }
 
   if(d.theft_alert){
     const ts = d.theft_alert.timestamp;
@@ -683,16 +715,15 @@ function handleAlerts(d){
       document.getElementById('theftBanner').classList.add('active');
       toast('⚠️ ' + (d.theft_alert.message || 'Theft detected!'));
     }
-  } else {
-    prevTheftTs = null;
-  }
+  } else { prevTheftTs = null; }
 }
 
 function handlePaymentFraud(reason){
-  onPaymentPage=false;
+  onPaymentPage = false;
   hideProcessing();
   goTo('dashboard');
-  document.getElementById('fraudText').textContent=`🚨 ${reason}! Total recalculated — please pay again.`;
+  document.getElementById('fraudText').textContent =
+    `🚨 ${reason}! Total recalculated — please pay again.`;
   document.getElementById('fraudBanner').classList.add('active');
   toast("🚨 Cart changed during payment!");
 }
@@ -701,53 +732,53 @@ function handlePaymentFraud(reason){
 //  DETECTIONS OVERLAY
 // ─────────────────────────────────────────────────────
 function updateDetectionsOverlay(detections){
-  const overlay=document.getElementById('detOverlay');
+  const overlay = document.getElementById('detOverlay');
   if(!detections.length){
-    overlay.innerHTML='';
-    document.getElementById('detCount').textContent='0';
-    document.getElementById('confStat').textContent='—';
+    overlay.innerHTML = '';
+    document.getElementById('detCount').textContent = '0';
+    document.getElementById('confStat').textContent = '—';
     return;
   }
-  const top=detections.slice(0,4);
-  overlay.innerHTML=top.map(d=>
+  const top = detections.slice(0, 4);
+  overlay.innerHTML = top.map(d =>
     `<span class="det-tag">${EM[d.name]||'📦'} ${d.name} ${(d.conf*100).toFixed(0)}%</span>`
   ).join('');
-  document.getElementById('detCount').textContent=detections.length;
-  const maxConf=Math.max(...detections.map(d=>d.conf));
-  document.getElementById('confStat').textContent=(maxConf*100).toFixed(0)+'%';
+  document.getElementById('detCount').textContent = detections.length;
+  const maxConf = Math.max(...detections.map(d => d.conf));
+  document.getElementById('confStat').textContent = (maxConf * 100).toFixed(0) + '%';
 }
 
 // ─────────────────────────────────────────────────────
 //  POPUPS
 // ─────────────────────────────────────────────────────
 function showAddPopup(item){
-  document.getElementById('detStatus').textContent="Added!";
-  document.getElementById('addIcon').textContent=EM[item.name]||'📦';
-  document.getElementById('addName').textContent=item.name;
-  document.getElementById('addPrice').textContent='₹'+item.price;
-  const pop=document.getElementById('addPopup');
-  pop.style.display='flex';
-  pop.style.animation='none';pop.offsetHeight;
-  pop.style.animation='popGreen 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
-  if(addPopTimer)clearTimeout(addPopTimer);
-  addPopTimer=setTimeout(()=>{
-    pop.style.display='none';
-    document.getElementById('detStatus').textContent='Scanning';
-  },3500);
+  document.getElementById('detStatus').textContent = "Added!";
+  document.getElementById('addIcon').textContent   = EM[item.name] || '📦';
+  document.getElementById('addName').textContent   = item.name;
+  document.getElementById('addPrice').textContent  = '₹' + item.price;
+  const pop = document.getElementById('addPopup');
+  pop.style.display = 'flex';
+  pop.style.animation = 'none'; pop.offsetHeight;
+  pop.style.animation = 'popGreen 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
+  if(addPopTimer) clearTimeout(addPopTimer);
+  addPopTimer = setTimeout(() => {
+    pop.style.display = 'none';
+    document.getElementById('detStatus').textContent = 'Scanning';
+  }, 3500);
   showNut(item.name);
   toast(`🛒 ${item.name} added — ₹${item.price}`);
 }
 
 function showRemovePopup(item){
-  document.getElementById('removeIcon').textContent=EM[item.name]||'🗑️';
-  document.getElementById('removeName').textContent=item.name;
-  document.getElementById('removePrice').textContent='₹'+item.price;
-  const pop=document.getElementById('removePopup');
-  pop.style.display='flex';
-  pop.style.animation='none';pop.offsetHeight;
-  pop.style.animation='popRed 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
-  if(removePopTimer)clearTimeout(removePopTimer);
-  removePopTimer=setTimeout(()=>{pop.style.display='none';},3500);
+  document.getElementById('removeIcon').textContent  = EM[item.name] || '🗑️';
+  document.getElementById('removeName').textContent  = item.name;
+  document.getElementById('removePrice').textContent = '₹' + item.price;
+  const pop = document.getElementById('removePopup');
+  pop.style.display = 'flex';
+  pop.style.animation = 'none'; pop.offsetHeight;
+  pop.style.animation = 'popRed 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
+  if(removePopTimer) clearTimeout(removePopTimer);
+  removePopTimer = setTimeout(() => { pop.style.display = 'none'; }, 3500);
   toast(`🗑️ ${item.name} removed`);
 }
 
@@ -755,23 +786,27 @@ function showRemovePopup(item){
 //  NUTRITION
 // ─────────────────────────────────────────────────────
 function showNut(name){
-  const n=NUT[name];if(!n)return;
-  document.getElementById('nutritionEmpty').style.display='none';
-  document.getElementById('nutLabel').textContent=name;
-  const p=document.getElementById('nutritionPanel');p.classList.add('visible');
-  const isF=n.cal>0;
-  const tc=t=>t.includes('Gluten')?'warn':(t==='Veg'||t.includes('Free')?'ok':'');
-  p.innerHTML=`<div class="nh"><span class="nem">${EM[name]||'📦'}</span>
-    <div><div class="nn">${name}</div><div class="nb">${isF?'Per 100g':'Non-food'}</div></div></div>
-    ${isF?`<div class="ng">
+  const n = NUT[name]; if(!n) return;
+  document.getElementById('nutritionEmpty').style.display = 'none';
+  document.getElementById('nutLabel').textContent = name;
+  const p = document.getElementById('nutritionPanel');
+  p.classList.add('visible');
+  const isF = n.cal > 0;
+  const tc = t => t.includes('Gluten') ? 'warn' : (t === 'Veg' || t.includes('Free') ? 'ok' : '');
+  p.innerHTML = `
+    <div class="nh">
+      <span class="nem">${EM[name]||'📦'}</span>
+      <div><div class="nn">${name}</div><div class="nb">${isF ? 'Per 100g' : 'Non-food'}</div></div>
+    </div>
+    ${isF ? `<div class="ng">
       <div class="nc"><div class="ncv">${n.cal}</div><div class="ncl">Cal</div></div>
       <div class="nc"><div class="ncv">${n.carbs}g</div><div class="ncl">Carbs</div></div>
       <div class="nc"><div class="ncv">${n.protein}g</div><div class="ncl">Protein</div></div>
       <div class="nc"><div class="ncv">${n.fat}g</div><div class="ncl">Fat</div></div>
-    </div>`:'<div style="font-size:13px;color:var(--t3);text-align:center;padding:8px 0">No nutritional data</div>'}
+    </div>` : '<div style="font-size:13px;color:var(--t3);text-align:center;padding:8px 0">No nutritional data</div>'}
     <div class="ntags">
-      ${n.tags.map(t=>`<span class="ntag ${tc(t)}">${t}</span>`).join('')}
-      ${n.al.map(a=>`<span class="ntag warn">⚠️ ${a}</span>`).join('')}
+      ${n.tags.map(t => `<span class="ntag ${tc(t)}">${t}</span>`).join('')}
+      ${n.al.map(a  => `<span class="ntag warn">⚠️ ${a}</span>`).join('')}
     </div>`;
 }
 
@@ -779,121 +814,118 @@ function showNut(name){
 //  CART RENDER
 // ─────────────────────────────────────────────────────
 function renderCart(serverTotal){
-  const total=serverTotal!==undefined
-    ?serverTotal
-    :serverCart.reduce((s,i)=>s+i.price,0);
-  document.getElementById('cartBadge').textContent=serverCart.length;
-  document.getElementById('totalNum').textContent='₹'+total;
-  document.getElementById('payBtn').disabled=serverCart.length===0;
-  const l=document.getElementById('cartList');
+  const total = serverTotal !== undefined
+    ? serverTotal
+    : serverCart.reduce((s, i) => s + i.price, 0);
+  document.getElementById('cartBadge').textContent = serverCart.length;
+  document.getElementById('totalNum').textContent  = '₹' + total;
+  document.getElementById('payBtn').disabled       = serverCart.length === 0;
+  const l = document.getElementById('cartList');
   if(!serverCart.length){
-    l.innerHTML='<div class="empty"><span class="ei">🛒</span><span>Cart is empty</span><span style="font-size:12px">Point camera at products</span></div>';
+    l.innerHTML = '<div class="empty"><span class="ei">🛒</span><span>Cart is empty</span><span style="font-size:12px">Point camera at products</span></div>';
     return;
   }
-  l.innerHTML=serverCart.map((item,i)=>`
+  l.innerHTML = serverCart.map((item, i) => `
     <div class="crow" onclick="showNut('${item.name.replace(/'/g,"\\'")}')">
       <span class="re">${EM[item.name]||'📦'}</span>
       <div class="ri">
         <div class="rn">${item.name}</div>
         <div class="rp">₹${item.price}</div>
-        ${item.weight_g?`<div class="rw">${item.weight_g}g</div>`:''}
+        ${item.weight_g ? `<div class="rw">${item.weight_g}g</div>` : ''}
       </div>
       <button class="rrm" onclick="event.stopPropagation();removeItem('${item.id}')" title="Remove">✕</button>
     </div>`).join('');
 }
 
-// ── CHANGE: removeItem now sends item id to /api/remove_item/<trolley>
 async function removeItem(itemId){
-  const item = serverCart.find(i=>i.id===itemId);
-  if(!item)return;
+  const item = serverCart.find(i => i.id === itemId);
+  if(!item) return;
   showRemovePopup(item);
-  serverCart = serverCart.filter(i=>i.id!==itemId);
+  serverCart = serverCart.filter(i => i.id !== itemId);
   renderCart();
   try{
-    await fetch(`/api/remove_item/${PI_TROLLEY}`,{
+    await fetch(`/api/remove_item/${PI_TROLLEY}`, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({item_id:itemId})
+      body: JSON.stringify({item_id: itemId})
     });
-  }catch{}
+  } catch{}
 }
 
 // ─────────────────────────────────────────────────────
 //  WEIGHT
 // ─────────────────────────────────────────────────────
 function updateWeight(g){
-  document.getElementById('weightNum').innerHTML=`${Math.round(g)}<span class="wu">g</span>`;
-  document.getElementById('wbarFill').style.width=Math.min((g/5000)*100,100)+'%';
-  const diff=g-lastWeight;
-  if(Math.abs(diff)>30){
-    const c=document.getElementById('wstatChip'),t=document.getElementById('wdeltaText');
-    if(diff>0){c.className='wsc added';c.textContent='Added';t.textContent=`+${Math.round(diff)}g`;}
-    else{c.className='wsc removed';c.textContent='Removed';t.textContent=`-${Math.round(Math.abs(diff))}g`;}
-    if(weightStableTimer)clearTimeout(weightStableTimer);
-    weightStableTimer=setTimeout(()=>{
-      c.className='wsc stable';c.textContent='Stable';t.textContent='Stable';
-    },4000);
+  document.getElementById('weightNum').innerHTML = `${Math.round(g)}<span class="wu">g</span>`;
+  document.getElementById('wbarFill').style.width = Math.min((g / 5000) * 100, 100) + '%';
+  const diff = g - lastWeight;
+  if(Math.abs(diff) > 30){
+    const c = document.getElementById('wstatChip');
+    const t = document.getElementById('wdeltaText');
+    if(diff > 0){ c.className='wsc added';   c.textContent='Added';   t.textContent=`+${Math.round(diff)}g`; }
+    else        { c.className='wsc removed'; c.textContent='Removed'; t.textContent=`-${Math.round(Math.abs(diff))}g`; }
+    if(weightStableTimer) clearTimeout(weightStableTimer);
+    weightStableTimer = setTimeout(() => {
+      c.className = 'wsc stable'; c.textContent = 'Stable'; t.textContent = 'Stable';
+    }, 4000);
   }
-  lastWeight=g;
+  lastWeight = g;
 }
 
 // ─────────────────────────────────────────────────────
-//  PAYMENT — CHANGE: POST /api/checkout/<id> to enter payment mode
+//  PAYMENT
 // ─────────────────────────────────────────────────────
 async function startPayment(){
-  if(serverCart.length===0){toast('⚠️ Cart is empty');return;}
-  onPaymentPage=true;
+  if(serverCart.length === 0){ toast('⚠️ Cart is empty'); return; }
+  onPaymentPage = true;
   closeBanner('fraudBanner');
-  const total=serverCart.reduce((s,i)=>s+i.price,0);
-  paidTotal=total;
+  const total = serverCart.reduce((s, i) => s + i.price, 0);
+  paidTotal = total;
 
-  showProcessing('Creating Order...','Setting up your payment');
+  showProcessing('Creating Order...', 'Setting up your payment');
 
-  // ── CHANGE: new checkout endpoint ──
-  try{
-    await fetch(`/api/checkout/${PI_TROLLEY}`,{method:'POST'});
-  }catch{}
+  try{ await fetch(`/api/checkout/${PI_TROLLEY}`, {method:'POST'}); } catch{}
 
   try{
-    const r=await fetch('/create_order',{
+    const r = await fetch('/create_order', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({amount:total})
+      body: JSON.stringify({amount: total})
     });
-    const d=await r.json();
+    const d = await r.json();
     hideProcessing();
-    if(d.status!=='success'){
-      toast('⚠️ Could not create order: '+(d.message||'Try again'));
-      onPaymentPage=false;return;
+    if(d.status !== 'success'){
+      toast('⚠️ Could not create order: ' + (d.message || 'Try again'));
+      onPaymentPage = false; return;
     }
-    const options={
-      key:RZP_KEY_ID,
-      amount:total*100,
-      currency:'INR',
-      name:'SmartTrolley',
-      description:`Trolley ${trolleyNum} — ${serverCart.length} items`,
-      order_id:d.order_id,
-      prefill:{contact:'+91'+currentPhone},
-      notes:{trolley:trolleyNum},
-      theme:{color:'#1a6b4a'},
-      handler:function(response){
-        paymentId=response.razorpay_payment_id||'';
-        orderId=response.razorpay_order_id||d.order_id;
-        onPaymentPage=false;
+    const options = {
+      key: RZP_KEY_ID,
+      amount: total * 100,
+      currency: 'INR',
+      name: 'SmartTrolley',
+      description: `Trolley ${trolleyNum} — ${serverCart.length} items`,
+      order_id: d.order_id,
+      prefill: {contact: '+91' + currentPhone},
+      notes: {trolley: trolleyNum},
+      theme: {color: '#1a6b4a'},
+      handler: function(response){
+        paymentId = response.razorpay_payment_id || '';
+        orderId   = response.razorpay_order_id || d.order_id;
+        onPaymentPage = false;
         openBillPage();
       },
-      modal:{
-        ondismiss:function(){
-          onPaymentPage=false;
+      modal: {
+        ondismiss: function(){
+          onPaymentPage = false;
           hideProcessing();
           toast('⚠️ Payment cancelled.');
         }
       }
     };
-    const rzp=new Razorpay(options);
+    const rzp = new Razorpay(options);
     rzp.open();
-  }catch(e){
-    hideProcessing();onPaymentPage=false;
+  } catch(e){
+    hideProcessing(); onPaymentPage = false;
     toast('⚠️ Payment error. Try again.');
   }
 }
@@ -902,22 +934,22 @@ async function startPayment(){
 //  BILL PAGE
 // ─────────────────────────────────────────────────────
 function openBillPage(){
-  const now=new Date();
-  document.getElementById('bpDate').textContent=now.toLocaleString('en-IN',{
-    day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'
+  const now = new Date();
+  document.getElementById('bpDate').textContent = now.toLocaleString('en-IN', {
+    day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
   });
-  document.getElementById('bpTrolleyInfo').textContent=`Trolley ${trolleyNum} · +91 ${currentPhone}`;
-  document.getElementById('bpTxnId').textContent=paymentId?`Txn: ${paymentId}`:'';
-  document.getElementById('bpItems').innerHTML=serverCart.map(i=>`
+  document.getElementById('bpTrolleyInfo').textContent = `Trolley ${trolleyNum} · +91 ${currentPhone}`;
+  document.getElementById('bpTxnId').textContent = paymentId ? `Txn: ${paymentId}` : '';
+  document.getElementById('bpItems').innerHTML = serverCart.map(i => `
     <div class="bp-item">
       <div class="bp-il"><span class="bp-em">${EM[i.name]||'📦'}</span><span class="bp-nm">${i.name}</span></div>
       <span class="bp-pr">₹${i.price}</span>
     </div>`).join('');
-  document.getElementById('bpTotal').textContent='₹'+paidTotal;
-  document.getElementById('waStatusPhone').textContent=currentPhone;
-  document.getElementById('waStatusIcon').textContent='📤';
-  document.getElementById('waStatusTitle').textContent='Sending bill to WhatsApp...';
-  document.getElementById('waResendBtn').style.display='none';
+  document.getElementById('bpTotal').textContent      = '₹' + paidTotal;
+  document.getElementById('waStatusPhone').textContent = currentPhone;
+  document.getElementById('waStatusIcon').textContent  = '📤';
+  document.getElementById('waStatusTitle').textContent = 'Sending bill to WhatsApp...';
+  document.getElementById('waResendBtn').style.display = 'none';
   goTo('billpage');
   toast("✅ Payment successful! Sending your bill...");
   sendBillAuto();
@@ -925,71 +957,78 @@ function openBillPage(){
 
 async function sendBillAuto(){
   try{
-    const r=await fetch('/checkout',{
+    const r = await fetch('/checkout', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({phone:currentPhone,items:serverCart,total:paidTotal,payment_id:paymentId,trolley:trolleyNum})
+      body: JSON.stringify({
+        phone: currentPhone, items: serverCart,
+        total: paidTotal, payment_id: paymentId, trolley: trolleyNum
+      })
     });
-    const d=await r.json();
-    if(d.status==='success'){
-      document.getElementById('waStatusIcon').textContent='✅';
-      document.getElementById('waStatusTitle').textContent='Bill sent to WhatsApp!';
-      document.getElementById('waResendBtn').style.display='none';
-      toast('✅ Bill sent to +91'+currentPhone+'!');
-    }else{setBillFailed();}
-  }catch{setBillFailed();}
+    const d = await r.json();
+    if(d.status === 'success'){
+      document.getElementById('waStatusIcon').textContent  = '✅';
+      document.getElementById('waStatusTitle').textContent = 'Bill sent to WhatsApp!';
+      document.getElementById('waResendBtn').style.display = 'none';
+      toast('✅ Bill sent to +91' + currentPhone + '!');
+    } else { setBillFailed(); }
+  } catch { setBillFailed(); }
 }
 
 function setBillFailed(){
-  document.getElementById('waStatusIcon').textContent='⚠️';
-  document.getElementById('waStatusTitle').textContent='Could not send bill';
-  document.getElementById('waResendBtn').style.display='block';
+  document.getElementById('waStatusIcon').textContent  = '⚠️';
+  document.getElementById('waStatusTitle').textContent = 'Could not send bill';
+  document.getElementById('waResendBtn').style.display = 'block';
   toast('⚠️ Bill sending failed — tap Resend');
 }
 
 async function resendBill(){
-  document.getElementById('waStatusIcon').textContent='📤';
-  document.getElementById('waStatusTitle').textContent='Resending bill...';
-  document.getElementById('waResendBtn').style.display='none';
+  document.getElementById('waStatusIcon').textContent  = '📤';
+  document.getElementById('waStatusTitle').textContent = 'Resending bill...';
+  document.getElementById('waResendBtn').style.display = 'none';
   await sendBillAuto();
 }
 
 // ─────────────────────────────────────────────────────
-//  DONE / RESET — CHANGE: /api/clear/<id> instead of /pi/clear_cart
+//  DONE / RESET
 // ─────────────────────────────────────────────────────
 async function doneBill(){
-  document.getElementById('tyTotal').textContent='₹'+paidTotal+' paid';
-  // ── CHANGE: new clear endpoint ──
-  try{
-    await fetch(`/api/clear/${PI_TROLLEY}`,{method:'POST'});
-  }catch{}
-  if(pollTimer)clearInterval(pollTimer);
-  if(frameTimer)clearInterval(frameTimer);
-  serverCart=[];onPaymentPage=false;paidTotal=0;paymentId='';orderId='';
-  prevFraudTs=null;prevTheftTs=null;
+  document.getElementById('tyTotal').textContent = '₹' + paidTotal + ' paid';
+  try{ await fetch(`/api/clear/${PI_TROLLEY}`, {method:'POST'}); } catch{}
+
+  if(pollTimer) clearInterval(pollTimer);
+
+  // Tear down MJPEG stream cleanly — blank src closes the TCP connection
+  const cam = document.getElementById('camFeed');
+  cam.src = ''; cam.style.display = 'none';
+  if(camReconnectTimer){ clearTimeout(camReconnectTimer); camReconnectTimer = null; }
+
+  serverCart = []; onPaymentPage = false; paidTotal = 0; paymentId = ''; orderId = '';
+  prevFraudTs = null; prevTheftTs = null;
   renderCart(0);
   goTo('thankyou');
-  const bar=document.getElementById('tyBar');
-  bar.style.animation='none';bar.offsetHeight;
-  bar.style.animation='countdown 5s linear forwards';
-  setTimeout(()=>startNewSession(),5000);
+
+  const bar = document.getElementById('tyBar');
+  bar.style.animation = 'none'; bar.offsetHeight;
+  bar.style.animation = 'countdown 5s linear forwards';
+  setTimeout(() => startNewSession(), 5000);
 }
 
 function startNewSession(){
-  document.getElementById('loginPhone').value='';
+  document.getElementById('loginPhone').value = '';
   document.getElementById('nutritionPanel').classList.remove('visible');
-  document.getElementById('nutritionEmpty').style.display='';
-  closeBanner('fraudBanner');closeBanner('theftBanner');
-  document.getElementById('loginBtn').disabled=true;
-  document.getElementById('phoneHint').textContent='Enter your 10-digit number then click OK';
-  document.getElementById('phoneHint').style.color='var(--t3)';
-  document.getElementById('detOverlay').innerHTML='';
-  document.getElementById('camFeed').style.display='none';
-  document.getElementById('camPlaceholder').style.display='flex';
-  document.getElementById('camPlaceholderText').textContent='Connecting to Pi camera...';
-  document.getElementById('camLiveBadge').style.display='none';
-  currentPhone='';piOnline=false;piWasOnline=false;camLoaded=false;
-  serverCart=[];lastWeight=0;
+  document.getElementById('nutritionEmpty').style.display = '';
+  closeBanner('fraudBanner'); closeBanner('theftBanner');
+  document.getElementById('loginBtn').disabled = true;
+  document.getElementById('phoneHint').textContent = 'Enter your 10-digit number then click OK';
+  document.getElementById('phoneHint').style.color = 'var(--t3)';
+  document.getElementById('detOverlay').innerHTML = '';
+  document.getElementById('camFeed').style.display = 'none';
+  document.getElementById('camPlaceholder').style.display = 'flex';
+  document.getElementById('camPlaceholderText').textContent = 'Connecting to Pi camera...';
+  document.getElementById('camLiveBadge').style.display = 'none';
+  currentPhone = ''; piOnline = false; piWasOnline = false;
+  serverCart = []; lastWeight = 0;
   generateTrolleyQR();
   goTo('startup');
 }
@@ -997,20 +1036,20 @@ function startNewSession(){
 // ─────────────────────────────────────────────────────
 //  TOAST
 // ─────────────────────────────────────────────────────
-let toastTimer=null;
+let toastTimer = null;
 function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  if(toastTimer)clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
 }
 
 // ─────────────────────────────────────────────────────
 //  INIT
 // ─────────────────────────────────────────────────────
 generateTrolleyQR();
-document.getElementById('loginPhone').addEventListener('keypress',e=>{
-  if(e.key==='Enter')doLogin();
+document.getElementById('loginPhone').addEventListener('keypress', e => {
+  if(e.key === 'Enter') doLogin();
 });
 </script>
 </body>

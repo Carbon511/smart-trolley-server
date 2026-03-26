@@ -10,7 +10,8 @@ Pi → Server:
 
 Server → Dashboard:
   GET  /api/status/<id>      — JSON (cart, weight, alerts, fps, detections)
-  GET  /api/frame/<id>       — annotated JPEG
+  GET  /api/frame/<id>       — annotated JPEG  (single-shot, cache-busted)
+  GET  /video_feed/<id>      — MJPEG stream for live video in browser
   POST /api/checkout/<id>    — signal checkout (freezes cart)
   POST /api/clear/<id>       — clear cart after payment
   POST /api/remove_item/<id> — remove item by id
@@ -38,7 +39,7 @@ import numpy as np
 import cv2
 import requests as http_requests
 from flask import (
-    Flask, request, jsonify, send_file,
+    Flask, request, jsonify, send_file, Response,
     redirect, send_from_directory, render_template_string
 )
 
@@ -215,7 +216,6 @@ def _load_model():
         opts.inter_op_num_threads = 2
         opts.intra_op_num_threads = 2
         opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        # Use CUDA if available, otherwise fallback to CPU
         providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
         _session = ort.InferenceSession(
             MODEL_PATH, sess_options=opts, providers=providers
@@ -309,17 +309,17 @@ def get_trolley(tid: str) -> dict:
 def _fresh_trolley() -> dict:
     return {
         "status": {
-            "cart":        [],
-            "total":       0,
-            "weight_g":    0,
-            "arduino_ok":  False,
-            "fps":         0,
-            "pi_fps":      0,
-            "detections":  [],
-            "fraud_alert": None,
-            "theft_alert": None,
-            "last_weight_arduino": 0,
-            "arduino_product": None,
+            "cart":                 [],
+            "total":                0,
+            "weight_g":             0,
+            "arduino_ok":           False,
+            "fps":                  0,
+            "pi_fps":               0,
+            "detections":           [],
+            "fraud_alert":          None,
+            "theft_alert":          None,
+            "last_weight_arduino":  0,
+            "arduino_product":      None,
         },
         "frame":          None,
         "frame_ts":       0,
@@ -463,38 +463,48 @@ def _find_product(detection_name):
             return val
     return None
 
+# ─────────────────────────────────────────────────────────────
+# FIX: weight is stored BEFORE calling the add/remove logic
+# Previously weight_g was read from status BEFORE the new value
+# was written, causing the first sensor_data POST to always use
+# stale weight for theft/removal checks.
+# ─────────────────────────────────────────────────────────────
 def _update_from_arduino(tid, product_name, weight_g):
     """
-    Update cart based on Arduino product detection.
-    Uses weight change to decide add/remove.
+    Called inside the /pi/sensor_data route which already holds
+    store_lock, so we do NOT re-acquire it here.
+    weight_g is the NEWLY received value (already written to
+    status["weight_g"] by the caller before this function runs).
     """
-    entry = get_trolley(tid)
+    entry  = get_trolley(tid)
     status = entry["status"]
-    with store_lock:
-        last_weight = status.get("last_weight_arduino", 0)
-        # If weight increased significantly and we have a product name
-        if weight_g > last_weight + 20 and product_name:
-            product = _find_product(product_name)
-            if product:
-                item_id = f"{product_name[:4].lower()}-{entry['_next_item_id']}"
-                entry["_next_item_id"] += 1
-                status["cart"].append({
-                    "id":    item_id,
-                    "name":  product["name"],
-                    "price": product["price"],
-                })
+
+    last_weight = status.get("last_weight_arduino", 0)
+
+    if weight_g > last_weight + 20 and product_name:
+        product = _find_product(product_name)
+        if product:
+            item_id = f"{product_name[:4].lower()}-{entry['_next_item_id']}"
+            entry["_next_item_id"] += 1
+            status["cart"].append({
+                "id":    item_id,
+                "name":  product["name"],
+                "price": product["price"],
+            })
+            status["total"] = sum(i["price"] for i in status["cart"])
+            log.info(f"[{tid}] ➕ Arduino: {product['name']} ₹{product['price']}")
+
+    elif weight_g < last_weight - 20 and product_name:
+        for i, item in reversed(list(enumerate(status["cart"]))):
+            if item["name"].lower() == product_name.lower():
+                removed = status["cart"].pop(i)
                 status["total"] = sum(i["price"] for i in status["cart"])
-                log.info(f"[{tid}] ➕ Arduino: {product['name']} ₹{product['price']}")
-        # If weight decreased significantly, remove the last matching product
-        elif weight_g < last_weight - 20 and product_name:
-            for i, item in reversed(list(enumerate(status["cart"]))):
-                if item["name"].lower() == product_name.lower():
-                    removed = status["cart"].pop(i)
-                    status["total"] = sum(i["price"] for i in status["cart"])
-                    log.info(f"[{tid}] ➖ Arduino: {removed['name']} ₹{removed['price']}")
-                    break
-        status["last_weight_arduino"] = weight_g
-        status["arduino_product"] = product_name
+                log.info(f"[{tid}] ➖ Arduino: {removed['name']} ₹{removed['price']}")
+                break
+
+    # Always update the recorded weight AFTER the comparison above
+    status["last_weight_arduino"] = weight_g
+    status["arduino_product"]     = product_name
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -506,22 +516,34 @@ app = Flask(__name__, template_folder="templates")
 def ping():
     return "pong", 200
 
+# ─────────────────────────────────────────────────────────────
+# FIX: weight_g is written to status FIRST so that
+# _update_from_arduino (and theft checks) sees the new value.
+# ─────────────────────────────────────────────────────────────
 @app.route("/pi/sensor_data", methods=["POST"])
 def pi_sensor_data():
     data = request.get_json(force=True, silent=True) or {}
-    tid = data.get("trolley_id", "unknown")
-    entry = get_trolley(tid)
+    tid  = data.get("trolley_id", "unknown")
+    entry  = get_trolley(tid)
     status = entry["status"]
+
     with store_lock:
+        # 1. Write weight first so downstream logic sees the new value
         if "weight_g" in data:
-            status["weight_g"] = data["weight_g"]
-        if "product" in data:
-            _update_from_arduino(tid, data["product"], status["weight_g"])
+            status["weight_g"] = float(data["weight_g"])
+
         if "arduino_ok" in data:
             status["arduino_ok"] = data["arduino_ok"]
+
         if "pi_fps" in data:
             status["pi_fps"] = data["pi_fps"]
+
+        # 2. Now run Arduino cart logic (uses the freshly written weight_g)
+        if "product" in data:
+            _update_from_arduino(tid, data["product"], status["weight_g"])
+
         entry["_rx_ts"] = time.time()
+
     return jsonify({"ok": True}), 200
 
 @app.route("/pi/frame/<trolley_id>", methods=["POST"])
@@ -534,10 +556,11 @@ def pi_frame(trolley_id):
         entry["_rx_ts"]   = time.time()
         entry["frame"]    = raw
         entry["frame_ts"] = time.time()
+    # Drop frame silently if worker queue is full (Pi is faster than inference)
     try:
         _infer_queue.put_nowait((trolley_id, raw))
     except Exception:
-        pass
+        log.debug(f"[{trolley_id}] Inference queue full — frame dropped")
     return jsonify({"ok": True}), 200
 
 @app.route("/pi/commands/<trolley_id>", methods=["GET"])
@@ -550,31 +573,83 @@ def pi_commands(trolley_id):
 
 @app.route("/api/status/<trolley_id>", methods=["GET"])
 def api_status(trolley_id):
-    entry = get_trolley(trolley_id)
+    entry  = get_trolley(trolley_id)
     status = dict(entry["status"])
-    last = entry.get("_rx_ts", 0)
-    status["online"] = bool(last and (time.time() - last) < STATUS_MAX_AGE)
+    last   = entry.get("_rx_ts", 0)
+    status["online"]      = bool(last and (time.time() - last) < STATUS_MAX_AGE)
     status["frame_age_s"] = round(time.time() - entry.get("frame_ts", 0), 1)
     return jsonify(status), 200
 
+# ─────────────────────────────────────────────────────────────
+# /api/frame — strict no-cache so JS polling always gets a fresh
+# JPEG and the browser never serves a stale cached copy.
+# ─────────────────────────────────────────────────────────────
 @app.route("/api/frame/<trolley_id>", methods=["GET"])
 def api_frame(trolley_id):
-    entry = get_trolley(trolley_id)
-    frame = entry.get("frame")
+    entry    = get_trolley(trolley_id)
+    frame    = entry.get("frame")
     frame_ts = entry.get("frame_ts", 0)
-    if not frame or (time.time() - frame_ts) > 60:
-        return send_file(
-            io.BytesIO(_grey_placeholder()),
-            mimetype="image/jpeg", max_age=0
+
+    img_bytes = frame if (frame and (time.time() - frame_ts) <= 60) \
+                else _grey_placeholder()
+
+    resp = send_file(io.BytesIO(img_bytes), mimetype="image/jpeg")
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"]        = "no-cache"
+    resp.headers["Expires"]       = "0"
+    return resp
+
+# ─────────────────────────────────────────────────────────────
+# /video_feed — MJPEG stream
+#
+# X-Accel-Buffering: no   → tells nginx/ngrok NOT to buffer the
+#                           multipart stream (without this, frames
+#                           arrive in delayed bursts, not smoothly).
+# Cache-Control/Pragma    → belt-and-braces for any intermediate
+#                           caching proxy.
+# Connection: keep-alive  → keeps the TCP socket open for the
+#                           duration of the stream.
+#
+# In your HTML use:
+#   <img id="cam" src="/video_feed/trolley_01"
+#        style="display:none"
+#        onload="onCamLoad()"
+#        onerror="onCamError()">
+# ─────────────────────────────────────────────────────────────
+def _mjpeg_generator(trolley_id):
+    """Yield annotated JPEG frames in multipart/x-mixed-replace format."""
+    placeholder = _grey_placeholder()
+    while True:
+        entry = get_trolley(trolley_id)
+        frame = entry.get("frame")
+        age   = time.time() - entry.get("frame_ts", 0)
+        data  = frame if (frame and age < 60) else placeholder
+        yield (
+            b"--frame\r\n"
+            b"Content-Type: image/jpeg\r\n\r\n"
+            + data +
+            b"\r\n"
         )
-    return send_file(io.BytesIO(frame), mimetype="image/jpeg", max_age=0)
+        time.sleep(0.05)   # ~20 fps ceiling; Pi sends ~15 fps — this is fine
+
+@app.route("/video_feed/<trolley_id>")
+def video_feed(trolley_id):
+    resp = Response(
+        _mjpeg_generator(trolley_id),
+        mimetype="multipart/x-mixed-replace; boundary=frame",
+    )
+    resp.headers["X-Accel-Buffering"] = "no"                      # nginx / ngrok
+    resp.headers["Cache-Control"]     = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"]            = "no-cache"
+    resp.headers["Connection"]        = "keep-alive"
+    return resp
 
 @app.route("/api/checkout/<trolley_id>", methods=["POST"])
 def api_checkout(trolley_id):
     entry = get_trolley(trolley_id)
     with store_lock:
         entry["_payment_mode"] = True
-        entry["command"] = "checkout"
+        entry["command"]       = "checkout"
     log.info(f"[{trolley_id}] Checkout — cart frozen")
     return jsonify({"ok": True}), 200
 
@@ -583,35 +658,38 @@ def api_clear(trolley_id):
     entry = get_trolley(trolley_id)
     with store_lock:
         s = entry["status"]
-        s["cart"] = []
-        s["total"] = 0
+        s["cart"]        = []
+        s["total"]       = 0
         s["fraud_alert"] = None
         s["theft_alert"] = None
-        entry["_payment_mode"] = False
-        entry["_det_buffer"] = {}
+        entry["_payment_mode"]  = False
+        entry["_det_buffer"]    = {}
         entry["_absent_buffer"] = {}
-        entry["_next_item_id"] = 1
-        entry["command"] = "clear_cart"
+        entry["_next_item_id"]  = 1
+        entry["command"]        = "clear_cart"
     log.info(f"[{trolley_id}] Cart cleared")
     return jsonify({"ok": True}), 200
 
 @app.route("/api/remove_item/<trolley_id>", methods=["POST"])
 def api_remove_item(trolley_id):
-    data = request.get_json(force=True, silent=True) or {}
+    data    = request.get_json(force=True, silent=True) or {}
     item_id = data.get("item_id")
-    entry = get_trolley(trolley_id)
+    entry   = get_trolley(trolley_id)
     with store_lock:
         status = entry["status"]
-        before = len(status["cart"])
+        before  = len(status["cart"])
         removed = next(
             (i for i in status["cart"] if i.get("id") == item_id), None
         )
         if removed:
             entry["_det_buffer"].pop(removed["name"], None)
             entry["_absent_buffer"].pop(removed["name"], None)
-        status["cart"] = [i for i in status["cart"] if i.get("id") != item_id]
+        status["cart"]  = [i for i in status["cart"] if i.get("id") != item_id]
         status["total"] = sum(i["price"] for i in status["cart"])
-    return jsonify({"ok": True, "removed": before - len(entry["status"]["cart"])}), 200
+    return jsonify({
+        "ok":      True,
+        "removed": before - len(entry["status"]["cart"]),
+    }), 200
 
 @app.route("/api/trolleys", methods=["GET"])
 def api_trolleys():
@@ -623,21 +701,21 @@ def api_trolleys():
 def create_order():
     if not RZP_AVAILABLE:
         return jsonify({"status": "error", "message": "razorpay not installed"}), 500
-    data = request.get_json(force=True, silent=True) or {}
+    data   = request.get_json(force=True, silent=True) or {}
     amount = int(data.get("amount", 0))
     if amount <= 0:
         return jsonify({"status": "error", "message": "Invalid amount"}), 400
     if not RZP_KEY_ID or not RZP_KEY_SECRET:
         log.warning("Razorpay keys not set — returning demo order")
         return jsonify({
-            "status": "success",
+            "status":   "success",
             "order_id": f"order_DEMO_{int(time.time())}",
         }), 200
     try:
         client = razorpay.Client(auth=(RZP_KEY_ID, RZP_KEY_SECRET))
-        order = client.order.create({
-            "amount": amount * 100,
-            "currency": "INR",
+        order  = client.order.create({
+            "amount":          amount * 100,
+            "currency":        "INR",
             "payment_capture": 1,
         })
         log.info(f"Razorpay order: {order['id']}  ₹{amount}")
@@ -648,12 +726,12 @@ def create_order():
 
 @app.route("/checkout", methods=["POST"])
 def checkout():
-    data = request.get_json(force=True, silent=True) or {}
-    phone = data.get("phone", "N/A")
-    items = data.get("items", [])
-    total = data.get("total", 0)
+    data       = request.get_json(force=True, silent=True) or {}
+    phone      = data.get("phone",      "N/A")
+    items      = data.get("items",      [])
+    total      = data.get("total",      0)
     payment_id = data.get("payment_id", "N/A")
-    trolley = data.get("trolley", "T-0000")
+    trolley    = data.get("trolley",    "T-0000")
     try:
         log_purchase(phone, items, total, payment_id, trolley)
     except Exception as e:
@@ -661,14 +739,14 @@ def checkout():
     provider, wa_ok = send_whatsapp_bill(phone, items, total, payment_id, trolley)
     log.info(f"WhatsApp: provider={provider} success={wa_ok}")
     return jsonify({
-        "status": "success" if wa_ok else "partial",
+        "status":   "success" if wa_ok else "partial",
         "whatsapp": wa_ok,
         "provider": provider,
     }), 200
 
 @app.route("/owner", methods=["GET"])
 def owner_dashboard():
-    here = os.path.dirname(os.path.abspath(__file__))
+    here     = os.path.dirname(os.path.abspath(__file__))
     tpl_path = None
     for folder in [os.path.join(here, "templates"), here]:
         candidate = os.path.join(folder, "owner.html")
@@ -676,7 +754,10 @@ def owner_dashboard():
             tpl_path = candidate
             break
     if not tpl_path:
-        return "<h2>owner.html not found — place it inside the templates/ folder</h2>", 404
+        return (
+            "<h2>owner.html not found — place it inside the templates/ folder</h2>",
+            404,
+        )
     with open(tpl_path, encoding="utf-8") as f:
         template = f.read()
     logs = read_logs(200)
@@ -692,15 +773,18 @@ def dashboard():
     for folder in [os.path.join(here, "templates"), here]:
         if os.path.exists(os.path.join(folder, "index.html")):
             return send_from_directory(folder, "index.html")
-    return "<h2>index.html not found — place it inside the templates/ folder</h2>", 404
+    return (
+        "<h2>index.html not found — place it inside the templates/ folder</h2>",
+        404,
+    )
 
 @app.route("/health", methods=["GET"])
 def health():
     with store_lock:
         n = len(store)
     wa_via = (
-        "wati"    if (WATI_API_URL and WATI_API_TOKEN) else
-        "twilio"  if (TWILIO_AVAILABLE and TWILIO_SID) else
+        "wati"   if (WATI_API_URL and WATI_API_TOKEN) else
+        "twilio" if (TWILIO_AVAILABLE and TWILIO_SID) else
         "not_configured"
     )
     return jsonify({
@@ -715,21 +799,24 @@ def health():
         "time":         time.time(),
     }), 200
 
-def _grey_placeholder(w=640, h=480):
+def _grey_placeholder(w: int = 640, h: int = 480) -> bytes:
+    """Return a JPEG placeholder shown when the Pi camera is offline."""
     try:
         img = np.full((h, w, 3), 40, dtype=np.uint8)
         cv2.putText(
             img, "Waiting for Pi camera...",
             (w // 2 - 160, h // 2),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (120, 120, 120), 2
+            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (120, 120, 120), 2,
         )
         _, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 60])
         return buf.tobytes()
     except Exception:
+        # Minimal valid JPEG fallback (grey 1×1 pixel)
         return (
             b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
             b"\xff\xda\x00\x08\x01\x01\x00\x00?\x00\xfb\xd4P\x00\x00\x00\x1f\xff\xd9"
         )
+
 
 # ═══════════════════════════════════════════════════════════════
 #  STARTUP
